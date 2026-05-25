@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Acme.SaaS.API/Acme.SaaS.API.csproj" />
+    <Project Path="src/Acme.SaaS.Application/Acme.SaaS.Application.csproj" />
+    <Project Path="src/Acme.SaaS.Domain/Acme.SaaS.Domain.csproj" />
+    <Project Path="src/Acme.SaaS.Infrastructure/Acme.SaaS.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Acme.SaaS.API.Tests/Acme.SaaS.API.Tests.csproj" />
+    <Project Path="tests/Acme.SaaS.Application.Tests/Acme.SaaS.Application.Tests.csproj" />
+    <Project Path="tests/Acme.SaaS.Domain.Tests/Acme.SaaS.Domain.Tests.csproj" />
+    <Project Path="tests/Acme.SaaS.Infrastructure.Tests/Acme.SaaS.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>
