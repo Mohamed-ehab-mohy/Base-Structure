@@ -19,6 +19,21 @@ public static class ServiceCollectionExtensions
         services.AddDbContext<MasterDbContext>(options =>
             options.UseSqlServer(masterConnectionString));
 
+        services.AddDbContext<ApplicationDbContext>((sp, options) =>
+        {
+            var tenantConnectionService = sp.GetRequiredService<TenantConnectionService>();
+            var tenantProvider = sp.GetRequiredService<ITenantProvider>();
+            var connectionString = tenantConnectionService.GetConnectionString(tenantProvider.GetSchemaName());
+
+            options.UseSqlServer(connectionString);
+
+            var auditableInterceptor = sp.GetRequiredService<AuditableEntityInterceptor>();
+            var softDeleteInterceptor = sp.GetRequiredService<SoftDeleteInterceptor>();
+            var tenantInterceptor = sp.GetRequiredService<TenantInterceptor>();
+            options.AddInterceptors(auditableInterceptor, softDeleteInterceptor, tenantInterceptor);
+        });
+        services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
+
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
