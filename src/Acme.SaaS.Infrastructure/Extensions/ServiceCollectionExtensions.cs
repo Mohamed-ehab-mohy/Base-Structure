@@ -30,7 +30,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<TenantStore>();
         services.AddScoped<SchemaService>();
-        services.AddScoped<TenantConnectionService>();
+        services.AddScoped(_ => new TenantConnectionService(masterConnectionString));
 
         services.AddScoped<IFeatureGatingService, FeatureGatingService>();
         services.AddScoped<JwtTokenService>();
