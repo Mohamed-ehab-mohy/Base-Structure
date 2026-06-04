@@ -9,6 +9,7 @@ A production-ready **multi-tenant SaaS** template built with **.NET 10** followi
 │                                                                             │
 │  📦 Domain (Core)            // Zero external dependencies                  │
 │  ├── Common/                 // BaseEntity, BaseAuditableEntity, ValueObject│
+│  │                              ITenantEntity                               │
 │  ├── Entities/               // Tenant, User, Product, Role                │
 │  ├── Enums/                  // SubscriptionPlan, TenantStatus, UserRole    │
 │  └── Exceptions/             // DomainException, NotFoundException         │
@@ -18,10 +19,10 @@ A production-ready **multi-tenant SaaS** template built with **.NET 10** followi
 │  │   ├── Behaviors/          // LoggingBehavior, ValidationBehavior        │
 │  │   ├── DTOs/               // ApiResponse<T>, PagedResult<T>             │
 │  │   ├── Exceptions/         // ValidationException, ForbiddenException    │
+│  │   ├── Mapping/            // MappingProfile (AutoMapper)                 │
 │  │   └── Interfaces/         // ITenantProvider, ICurrentUserService,      │
 │  │                              IGenericRepository<T>, IUnitOfWork,         │
 │  │                              IApplicationDbContext, IPasswordHasher       │
-│  ├── Mapping/                // MappingProfile (AutoMapper)                 │
 │  ├── MiniServices/           // ⭐ Feature modules                          │
 │  │   ├── Tenants/            // ITenantService + TenantService             │
 │  │   ├── Identity/           // IAuthService + AuthService                 │
@@ -31,6 +32,7 @@ A production-ready **multi-tenant SaaS** template built with **.NET 10** followi
 │                                                                             │
 │  📦 Infrastructure           // Implementations                             │
 │  ├── MultiTenancy/           // ⭐ Tenant isolation core                    │
+│  │   ├── TenancyOptions.cs   // Mode: SeparateSchema / SharedSchema        │
 │  │   ├── Services/           // TenantProvider, SchemaService,             │
 │  │   │                          TenantConnectionService                     │
 │  │   └── Store/              // TenantStore (in-memory cache)               │
@@ -54,13 +56,14 @@ A production-ready **multi-tenant SaaS** template built with **.NET 10** followi
 │  📦 API (Presentation)       // HTTP entry point                            │
 │  ├── Controllers/            // TenantsController, AuthController,         │
 │  │                              ProductsController, BillingController       │
-│  ├── Middlewares/            // ⭐ TenantResolutionMiddleware,              │
-│  │                              ExceptionHandlingMiddleware,                │
-│  │                              RequestLoggingMiddleware                    │
+│  ├── Middlewares/                                                           │
+│  │   ├── ⭐ TenantResolutionMiddleware  // Subdomain/Header/JWT resolution  │
+│  │   ├── ExceptionHandlingMiddleware    // Global exception → JSON          │
+│  │   └── RequestLoggingMiddleware       // Method, path, status, duration   │
 │  ├── Extensions/             // DI + pipeline configuration                │
 │  └── Filters/                // SwaggerDefaultValues                       │
 │                                                                             │
-│  📦 Tests                                                                   │
+│  📦 Tests (xUnit)                                                           │
 │  ├── Domain.Tests                                                          │
 │  ├── Application.Tests                                                     │
 │  ├── Infrastructure.Tests                                                  │
@@ -92,11 +95,25 @@ A production-ready **multi-tenant SaaS** template built with **.NET 10** followi
 2. **Header** — `X-Tenant-Id` HTTP header
 3. **JWT Claim** — `TenantId` claim from token
 
-**Isolation Model**: **Schema-per-Tenant**
-- Each tenant gets a dedicated database schema (`tenant_{identifier}`)
-- `ApplicationDbContext` switches schema at runtime via `HasDefaultSchema()`
-- No `TenantId` column needed on business tables — isolation is schema-native
-- `MasterDbContext` holds global data (tenants, plans) in a shared schema
+**Isolation Model**: Configurable via `appsettings.json`:
+
+```json
+{
+  "TenancyOptions": {
+    "Mode": "SeparateSchema"
+  }
+}
+```
+
+| Feature | Separate Schema (default) | Shared Schema |
+|---|---|---|
+| Approach | Schema-per-tenant (`HasDefaultSchema`) | Filter-per-tenant (`WHERE TenantId`) |
+| `GenericRepository` | No filter — schema isolates | Auto `WHERE TenantId = @id` |
+| `TenantInterceptor` | Sets `TenantId` on add | Sets + blocks changes on modified |
+| `ITenantEntity` | Optional (audit) | Required |
+| `TenantId` on entities | Optional | Required |
+
+**Connection String**: Always the master database. Isolation is handled by schema (Separate Schema) or by automatic row filtering (Shared Schema). `TenantConnectionService` is available for database-per-tenant scenarios but not used in the current schema-per-tenant mode.
 
 ### Mini-Services Pattern
 
@@ -119,7 +136,7 @@ Strategy + Factory pattern for business logic that varies by tenant:
 
 - Passwords hashed with **BCrypt** via `IPasswordHasher` / `PasswordHasher`
 - **JWT** tokens with tenant and role claims
-- **PII, secrets, and connection strings** are never hardcoded; they come from configuration, environment variables, or a vault
+- **PII, secrets, and connection strings** are never hardcoded
 
 ---
 
@@ -161,13 +178,13 @@ dotnet ef migrations add InitialTenant --output-dir Persistence/Migrations/Tenan
 
 | Path | Description |
 |---|---|
-| `Domain/Common/` | Shared kernel — base entities, value objects |
+| `Domain/Common/` | Shared kernel — base entities, value objects, `ITenantEntity` |
 | `Domain/Entities/` | Core business entities |
 | `Application/Common/Interfaces/` | Contracts implemented by infrastructure |
 | `Application/MiniServices/` | Feature modules (one folder per feature) |
-| `Infrastructure/MultiTenancy/` | Tenant resolution, schema, connection management |
-| `Infrastructure/Persistence/` | EF Core contexts, migrations, configurations |
-| `Infrastructure/Services/Identity/` | JWT, current user, password hashing |
+| `Infrastructure/MultiTenancy/` | `TenancyOptions`, tenant resolution, schema, connection |
+| `Infrastructure/Persistence/` | EF Core contexts, migrations, configurations, interceptors |
+| `Infrastructure/Services/Identity/` | JWT, current user, password hashing (BCrypt) |
 | `Infrastructure/Services/CustomLogic/` | Per-tenant strategy pattern |
 | `API/Middlewares/` | Request pipeline — tenant resolution, logging, exceptions |
 | `API/Controllers/` | API endpoints |
@@ -187,13 +204,23 @@ RequestLoggingMiddleware        // Method, path, status, duration
   │
   ▼
 TenantResolutionMiddleware      // ⭐ Resolve tenant → HttpContext.Items
-  │
+  │                             //    (TenantId, SchemaName, Plan, Status)
   ▼
 Authentication (JWT) → Authorization
   │
   ▼
-Controller → MiniService → DbContext  // Schema-isolated data access
+Controller → MiniService
+  │         → GenericRepository (mode-aware filtering)
+  │         → ApplicationDbContext (schema-isolated / filter-isolated)
 ```
+
+---
+
+## Documentation
+
+- `folder-directory-map.md` — directory responsibilities
+- `migration-changelog.md` — architectural shifts, bug fixes, decision records
+- `folder_structure_complete (1).html` — interactive visual map (Arabic/English)
 
 ---
 
