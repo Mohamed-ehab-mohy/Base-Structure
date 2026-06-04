@@ -77,16 +77,19 @@ A production-ready **multi-tenant SaaS** template built with **.NET 10** followi
 
 ---
 
+## 🏢 Folder Directory Map
+
+Our architecture follows the **Standard Clean Architecture (Horizontal Slicing)** split into 4 core projects to maximize MVP velocity and eliminate over-engineering:
+
+1. **01. Domain:** Contains Enterprise Entities (Tenant, User, Product), Enums, and Core Exceptions. Fully isolated with zero dependencies.
+
+2. **02. Application:** Holds the core Business Logic wrapped in highly encapsulated **Mini-Services** (Identity, Tenants, Billing, Products) instead of full CQRS/MediatR overhead.
+
+3. **03. Infrastructure:** Handles Data Access (ApplicationDbContext vs MasterDbContext) and Multi-Tenancy strategies (Per-tenant connection strings & Schema isolation).
+
+4. **04. Presentation.API:** The application entry point containing Controllers, Middlewares (TenantResolution), and configurations.
+
 ## Architecture Decisions
-
-### Clean Architecture (4 Projects)
-
-| Layer | Responsibility | Dependencies |
-|---|---|---|
-| **Domain** | Entities, enums, exceptions, base classes | None |
-| **Application** | Use cases, DTOs, interfaces, mapping | Domain |
-| **Infrastructure** | Persistence, multi-tenancy, identity, services | Application |
-| **API** | Controllers, middleware, DI setup | Infrastructure |
 
 ### Multi-Tenancy Strategy
 
@@ -114,6 +117,14 @@ A production-ready **multi-tenant SaaS** template built with **.NET 10** followi
 | `TenantId` on entities | Optional | Required |
 
 **Connection String**: Always the master database. Isolation is handled by schema (Separate Schema) or by automatic row filtering (Shared Schema). `TenantConnectionService` is available for database-per-tenant scenarios but not used in the current schema-per-tenant mode.
+
+## 🔄 Why this Structure benefits our SaaS Implementation?
+
+* **Strict Tenant Isolation:** Tenant detection is completely handled at the Infrastructure/Middleware level. Domain and Application layers are completely tenant-agnostic.
+
+* **Database Strategy:** Implemented a Master/Tenant DB split. Master DB stores tenant metadata, while business data is logically isolated via per-tenant schemas.
+
+* **Runtime Reliability:** Connection strings are resolved dynamically per-request using `TenantConnectionService` wired directly into the context factory.
 
 ### Mini-Services Pattern
 
@@ -220,7 +231,7 @@ Controller → MiniService
 
 - `folder-directory-map.md` — directory responsibilities
 - `migration-changelog.md` — architectural shifts, bug fixes, decision records
-- `folder_structure_complete (1).html` — interactive visual map (Arabic/English)
+- `folder_structure.html` — interactive visual map (Arabic/English)
 
 ---
 
