@@ -1,5 +1,7 @@
 using Acme.SaaS.Application.Common.Interfaces;
 using Acme.SaaS.Domain.Common;
+using Acme.SaaS.Domain.Exceptions;
+using Acme.SaaS.Infrastructure.MultiTenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
@@ -8,10 +10,12 @@ namespace Acme.SaaS.Infrastructure.Persistence.Interceptors;
 public class TenantInterceptor : SaveChangesInterceptor
 {
     private readonly ITenantProvider _tenantProvider;
+    private readonly TenancyOptions _tenancyOptions;
 
-    public TenantInterceptor(ITenantProvider tenantProvider)
+    public TenantInterceptor(ITenantProvider tenantProvider, TenancyOptions tenancyOptions)
     {
         _tenantProvider = tenantProvider;
+        _tenancyOptions = tenancyOptions;
     }
 
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
@@ -24,8 +28,19 @@ public class TenantInterceptor : SaveChangesInterceptor
 
         foreach (var entry in eventData.Context.ChangeTracker.Entries())
         {
-            if (entry.Entity is ITenantEntity tenantEntity && entry.State == EntityState.Added)
-                tenantEntity.TenantId = tenantId;
+            if (entry.Entity is ITenantEntity tenantEntity)
+            {
+                if (entry.State == EntityState.Added)
+                {
+                    tenantEntity.TenantId = tenantId;
+                }
+                else if (entry.State == EntityState.Modified && _tenancyOptions.Mode == TenancyMode.SharedSchema)
+                {
+                    var originalTenantId = entry.OriginalValues.GetValue<Guid>(nameof(ITenantEntity.TenantId));
+                    if (originalTenantId != Guid.Empty && originalTenantId != tenantEntity.TenantId)
+                        throw new DomainException("Cannot transfer data to another tenant.");
+                }
+            }
         }
 
         return base.SavingChangesAsync(eventData, result, ct);

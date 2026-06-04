@@ -1,5 +1,6 @@
 using System.Text;
 using Acme.SaaS.Infrastructure.Extensions;
+using Acme.SaaS.Infrastructure.MultiTenancy;
 using Acme.SaaS.Infrastructure.Services.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -61,6 +62,8 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddTenantDbContext(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("MasterDb");
+        var tenancyOptions = configuration.GetSection("TenancyOptions").Get<TenancyOptions>() ?? new TenancyOptions();
+        services.AddSingleton(tenancyOptions);
         services.AddInfrastructureLayer(connectionString!);
 
         return services;
