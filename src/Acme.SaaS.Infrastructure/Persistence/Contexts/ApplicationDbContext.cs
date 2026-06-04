@@ -27,31 +27,4 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             modelBuilder.HasDefaultSchema(_tenantProvider.GetSchemaName());
     }
 
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        ApplyAuditFields();
-        return await base.SaveChangesAsync(cancellationToken);
-    }
-
-    private void ApplyAuditFields()
-    {
-        foreach (var entry in ChangeTracker.Entries<Domain.Common.BaseAuditableEntity>())
-        {
-            if (entry.State == EntityState.Added)
-            {
-                entry.Entity.CreatedAt = DateTime.UtcNow;
-            }
-
-            if (entry.State == EntityState.Modified)
-            {
-                entry.Entity.UpdatedAt = DateTime.UtcNow;
-            }
-
-            if (entry.State == EntityState.Deleted)
-            {
-                entry.State = EntityState.Modified;
-                entry.Entity.IsDeleted = true;
-            }
-        }
-    }
 }
