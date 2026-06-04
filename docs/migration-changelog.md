@@ -207,6 +207,30 @@ If a tenant requires an audit of all data access or a point-in-time restore, sep
 
 The team agreed on the KISS principle in Slack conversations. Separate Schema is not over-engineering — it is a **simpler mental model** for developers: "I operate in my tenant's schema, I don't need to think about filtering." This reduces cognitive load and prevents an entire category of production bugs.
 
+### Implementation Status
+
+Both modes are now fully supported and configurable via `appsettings.json`:
+
+```json
+{
+  "TenancyOptions": {
+    "Mode": "SeparateSchema"   // or "SharedSchema"
+  }
+}
+```
+
+**What changes when you flip the mode:**
+
+| Behavior | Separate Schema | Shared Schema |
+|---|---|---|
+| `GenericRepository` queries | No tenant filter — schema isolates | Auto-appends `WHERE TenantId = @id` |
+| `TenantInterceptor` on `Added` | Sets `TenantId` (audit-friendly) | Sets `TenantId` (required) |
+| `TenantInterceptor` on `Modified` | Allows changes | Blocks `TenantId` changes |
+| Business tables need `TenantId` | Optional (audit only) | Required |
+| Schema isolation | `HasDefaultSchema(schemaName)` | Single shared schema |
+
+This means the repository is now **ready for both patterns** with zero code changes required at the business logic level.
+
 ---
 
 ## Changes Applied to This Repository
