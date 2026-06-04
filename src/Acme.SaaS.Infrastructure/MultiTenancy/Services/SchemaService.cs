@@ -1,13 +1,14 @@
 using Acme.SaaS.Domain.Entities;
+using Acme.SaaS.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Acme.SaaS.Infrastructure.MultiTenancy.Services;
 
 public class SchemaService
 {
-    private readonly DbContext _masterContext;
+    private readonly MasterDbContext _masterContext;
 
-    public SchemaService(DbContext masterContext)
+    public SchemaService(MasterDbContext masterContext)
     {
         _masterContext = masterContext;
     }
