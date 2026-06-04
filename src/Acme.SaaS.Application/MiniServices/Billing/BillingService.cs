@@ -21,16 +21,16 @@ public class BillingService : IBillingService
         return ApiResponse<string>.Ok(plan);
     }
 
-    public async Task<ApiResponse<bool>> UpgradePlanAsync(string plan, CancellationToken ct)
+    public async Task<ApiResponse<bool>> UpgradePlanAsync(UpgradePlanRequest request, CancellationToken ct)
     {
         var tenant = await _context.Tenants.FindAsync([_tenantProvider.GetTenantId()], ct);
         if (tenant is null)
             return ApiResponse<bool>.Fail("Tenant not found.");
 
-        if (Enum.TryParse<Domain.Enums.SubscriptionPlan>(plan, true, out var parsed))
+        if (Enum.TryParse<Domain.Enums.SubscriptionPlan>(request.Plan, true, out var parsed))
             tenant.Plan = parsed;
 
         await _context.SaveChangesAsync(ct);
-        return ApiResponse<bool>.Ok(true, $"Plan upgraded to {plan}.");
+        return ApiResponse<bool>.Ok(true, $"Plan upgraded to {request.Plan}.");
     }
 }

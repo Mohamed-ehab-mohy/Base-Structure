@@ -17,6 +17,6 @@ public class BillingController : BaseApiController
         ToActionResult(await _billingService.GetCurrentPlanAsync(ct));
 
     [HttpPost("upgrade")]
-    public async Task<IActionResult> Upgrade([FromBody] string plan, CancellationToken ct) =>
-        ToActionResult(await _billingService.UpgradePlanAsync(plan, ct));
+    public async Task<IActionResult> Upgrade([FromBody] UpgradePlanRequest request, CancellationToken ct) =>
+        ToActionResult(await _billingService.UpgradePlanAsync(request, ct));
 }
