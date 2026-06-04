@@ -146,6 +146,69 @@ tenant_xyz_db (per tenant — isolated)
 
 ---
 
+## Decision Record: Separate Schema vs Shared Schema
+
+During the architecture design phase, both multi-tenant isolation strategies were evaluated:
+
+### Shared Database, Shared Schema (Table-Per-Tenant)
+
+```
+📦 app_db
+└── dbo.Products    (TenantId discriminator — all tenants mixed)
+└── dbo.Orders      (TenantId discriminator — all tenants mixed)
+└── dbo.Users       (TenantId discriminator — all tenants mixed)
+```
+
+**How it works:** All tenants share the same database and the same schema. A `TenantId` column on every table discriminates which rows belong to which tenant. Every query must include `WHERE TenantId = @id`.
+
+### Shared Database, Separate Schema (Schema-Per-Tenant) ✅ **Selected**
+
+```
+📦 app_db
+├── tenant_acme.Products    (only tenant_acme's data)
+├── tenant_acme.Orders
+├── tenant_xyz.Products     (only tenant_xyz's data)
+└── tenant_xyz.Orders
+```
+
+**How it works:** All tenants share the same database instance, but each tenant gets its own schema. The `ApplicationDbContext` switches the default schema at runtime based on the resolved tenant. No `TenantId` column needed.
+
+### Comparison
+
+| Criterion | Shared Schema | Separate Schema ✅ |
+|---|---|---|
+| **Data isolation** | Logical — `WHERE TenantId` filter | Physical — separate schema namespace |
+| **Data leak risk** | One missing `WHERE` leaks all tenants | Impossible — wrong schema is a catalog error |
+| **Backup & restore** | All tenants together | Per-tenant (selective restore) |
+| **Migration independence** | Single migration for all tenants | Each schema can migrate independently |
+| **Query performance** | Index contention at scale | Schema-local indexes, no cross-tenant contention |
+| **Onboarding complexity** | Minimal — just insert a row | Medium — must create schema + run migrations |
+| **Migration to dedicated DB** | Requires row-level data extraction | Trivial — `CREATE DATABASE` + copy schema |
+
+### Why Separate Schema Is the Right Choice For This Project
+
+**1. Defense in depth — physical isolation beats logical isolation.**
+
+Shared Schema relies on every developer remembering `WHERE TenantId = @id` on every query. A single omission during a hotfix, a missing filter in a new feature, or a JOIN without the discriminator exposes Tenant B's data to Tenant A. Separate Schema makes this class of bug **structurally impossible** — EF Core will throw a catalog error before a single row is returned.
+
+**2. The architecture supports MVP now and enterprise later.**
+
+The current setup (separate schemas in one database) requires zero code changes to graduate to per-tenant databases. The `TenantConnectionService` and `MasterDbContext` are already designed for this transition. With Shared Schema, extracting a tenant to a dedicated database later is a painful data migration project.
+
+**3. Migrations are safer and more flexible.**
+
+With separate schemas, a migration can be rolled out to a single tenant for testing before applying it globally. If a migration has a destructive bug, only the affected tenant's schema is impacted. Shared Schema applies migrations to all tenants simultaneously — a bug affects everyone.
+
+**4. Audit and compliance requirements.**
+
+If a tenant requires an audit of all data access or a point-in-time restore, separate schemas make this straightforward. The schema is the isolation boundary — no need to filter by `TenantId` and hope the filter is correct.
+
+**5. It matches the team's MVP philosophy.**
+
+The team agreed on the KISS principle in Slack conversations. Separate Schema is not over-engineering — it is a **simpler mental model** for developers: "I operate in my tenant's schema, I don't need to think about filtering." This reduces cognitive load and prevents an entire category of production bugs.
+
+---
+
 ## Changes Applied to This Repository
 
 ### Phase 1 — Initial Structure (Baseline)
