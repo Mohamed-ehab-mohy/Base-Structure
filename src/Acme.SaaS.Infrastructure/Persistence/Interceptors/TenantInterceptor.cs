@@ -1,4 +1,5 @@
 using Acme.SaaS.Application.Common.Interfaces;
+using Acme.SaaS.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
@@ -23,8 +24,8 @@ public class TenantInterceptor : SaveChangesInterceptor
 
         foreach (var entry in eventData.Context.ChangeTracker.Entries())
         {
-            if (entry.Entity is Domain.Entities.Product product && entry.State == EntityState.Added)
-                product.TenantId = tenantId;
+            if (entry.Entity is ITenantEntity tenantEntity && entry.State == EntityState.Added)
+                tenantEntity.TenantId = tenantId;
         }
 
         return base.SavingChangesAsync(eventData, result, ct);

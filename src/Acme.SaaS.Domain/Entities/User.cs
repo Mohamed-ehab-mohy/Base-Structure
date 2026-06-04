@@ -1,6 +1,6 @@
 namespace Acme.SaaS.Domain.Entities;
 
-public class User : Common.BaseAuditableEntity
+public class User : Common.BaseAuditableEntity, Common.ITenantEntity
 {
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
