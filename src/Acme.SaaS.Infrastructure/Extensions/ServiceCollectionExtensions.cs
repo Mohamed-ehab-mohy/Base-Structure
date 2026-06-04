@@ -33,6 +33,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped(_ => new TenantConnectionService(masterConnectionString));
 
         services.AddScoped<IFeatureGatingService, FeatureGatingService>();
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<JwtTokenService>();
 
         return services;
