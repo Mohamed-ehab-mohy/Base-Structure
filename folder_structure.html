@@ -358,6 +358,7 @@
   <a href="#application">Application</a>
   <a href="#infrastructure">Infrastructure</a>
   <a href="#presentation">API</a>
+  <a href="#tests">Tests</a>
   <a href="#flow">Pipeline Flow</a>
   <span class="logo">SaaS · Clean Architecture</span>
 </nav>
@@ -689,17 +690,62 @@
 
   <div class="term-list">
     <div class="term-row">
-      <span class="term-label purple">Common/Behaviors/</span>
+      <span class="term-label blue">Extensions/</span>
       <div class="term-desc">
-        <strong>LoggingBehavior.cs</strong> — قبل وبعد كل عملية، يسجل Method Name, Duration, Status.<br>
-        <strong>ValidationBehavior.cs</strong> — (مستقبلي) لو احتجنا FluentValidation.
+        <strong>ServiceCollectionExtensions.cs</strong> — DI لكل المشاريع: JWT Auth, Swagger, Controllers, HttpContextAccessor. فيه <strong style="color:var(--yellow)">3 طرق رئيسية</strong>:
+        <div style="margin-top:.4rem;font-size:.85rem">
+          <span style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:5px;padding:.1rem .5rem;font-family:'JetBrains Mono',monospace">AddApiLayer()</span> — تسجيل JWT + Swagger + Controllers + HttpContextAccessor<br>
+          <span style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:5px;padding:.1rem .5rem;font-family:'JetBrains Mono',monospace">AddTenantDbContext()</span> — يقرأ TenancyOptions و ConnectionString من Config، يسجل الـ Infrastructure Layer كامل<br>
+          ‏الـ <span style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:5px;padding:.1rem .5rem;font-family:'JetBrains Mono',monospace">AddApplicationLayer()</span> متعرف في Application/Extensions
+        </div>
       </div>
     </div>
     <div class="term-row">
-      <span class="term-label purple">Common/DTOs/</span>
+      <span class="term-label blue">ApplicationBuilderExtensions.cs</span>
       <div class="term-desc">
-        <strong>PagedResult.cs</strong> — wrapper للـ Pagination (Items, TotalCount, Page, Size).<br>
-        <strong>ApiResponse.cs</strong> — استجابة موحدة: { Success, Data, Message, Errors }.
+        <strong>UseApiPipeline()</strong> — ترتيب الـ Middleware Pipeline:
+        <div style="margin-top:.4rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--muted);line-height:1.7">
+          1️⃣ ExceptionHandlingMiddleware<br>
+          2️⃣ RequestLoggingMiddleware<br>
+          3️⃣ ⭐ TenantResolutionMiddleware<br>
+          4️⃣ app.UseAuthentication()<br>
+          5️⃣ app.UseAuthorization()<br>
+          6️⃣ app.UseSwagger() + UseSwaggerUI() ← Dev only<br>
+          7️⃣ app.MapControllers()
+        </div>
+      </div>
+    </div>
+    <div class="term-row">
+      <span class="term-label blue">Filters/SwaggerDefaultValues.cs</span>
+      <div class="term-desc">
+        <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">IOperationFilter</code> بيزود <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">X-Tenant-Id</code> Header Parameter في كل Operations في Swagger UI عشان تقدر تختبر الـ Multi-Tenancy من Swagger نفسه من غير ما تحتاج Postman.
+      </div>
+    </div>
+    <div class="term-row">
+      <span class="term-label blue">Program.cs</span>
+      <div class="term-desc">
+        نقطة البداية — 12 سطر بس:
+        <div style="margin-top:.4rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--muted);line-height:1.6;background:var(--code-bg);padding:.5rem .7rem;border-radius:6px">
+var builder = WebApplication.CreateBuilder(args);<br>
+builder.Services.AddApiLayer(builder.Configuration);<br>
+builder.Services.AddApplicationLayer();<br>
+builder.Services.AddTenantDbContext(builder.Configuration);<br>
+var app = builder.Build();<br>
+app.UseApiPipeline();<br>
+app.Run();
+        </div>
+      </div>
+    </div>
+    <div class="term-row">
+      <span class="term-label blue">appsettings.json</span>
+      <div class="term-desc">
+        الـ Configuration File الأساسي. أقسم كذا قسم:
+        <div style="margin-top:.4rem;font-size:.85rem;color:var(--muted);line-height:1.7">
+          <strong style="color:var(--blue)">ConnectionStrings.MasterDb</strong> — SQL Server Connection String<br>
+          <strong style="color:var(--blue)">Jwt</strong> — Secret, Issuer, Audience, ExpirationHours<br>
+          <strong style="color:var(--blue)">TenancyOptions.Mode</strong> — SeparateSchema | SharedSchema<br>
+          <strong style="color:var(--blue)">Logging</strong> — Log Levels (Information, Warning, Error)
+        </div>
       </div>
     </div>
   </div>
@@ -987,9 +1033,108 @@
   </div>
 </section>
 
-<!-- ════════════════ 7. Pipeline Flow ════════════════ -->
+<!-- ════════════════ 7. Tests ════════════════ -->
+<section class="section fade-in" id="tests">
+  <h2 class="section-title"><span class="num">٧</span> Tests — Quality Assurance (4 Projects)</h2>
+
+  <div class="card card-accent-green">
+    <div class="method-header">
+      <div class="method-icon green">🧪</div>
+      <div class="method-meta">
+        <h3 style="color:var(--green)">xUnit · 4 Test Projects</h3>
+        <span>مرآة للـ Source Structure — كل Layer ليها Test Project مستقل</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="diagram-box">
+    <div class="diagram-title">tests/ — Mirroring src/ Structure</div>
+    <div class="folder-display">
+<pre><span class="fd-project">📦 tests/</span>
+ <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Acme.SaaS.Domain.Tests</span>     <span class="fd-comment">// Pure Unit — مفيش Mocks</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">ProductTests.cs</span>             <span class="fd-comment">// Entity Rules</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">MoneyTests.cs</span>               <span class="fd-comment">// Value Object Equality</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">DomainExceptionTests.cs</span>     <span class="fd-comment">// Exception Behavior</span>
+ <span class="fd-sep">┃</span>
+ <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Acme.SaaS.Application.Tests</span> <span class="fd-comment">// Use Cases — Mocks للـ Interfaces</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">TenantServiceTests.cs</span>       <span class="fd-comment">// Tenant CRUD Logic</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">AuthServiceTests.cs</span>         <span class="fd-comment">// Login/Register Flow</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">ProductServiceTests.cs</span>      <span class="fd-comment">// Product Business Rules</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">BillingServiceTests.cs</span>      <span class="fd-comment">// Plan Upgrade Logic</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">MappingProfileTests.cs</span>      <span class="fd-comment">// AutoMapper Config</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">ApiResponseTests.cs</span>         <span class="fd-comment">// Response Format</span>
+ <span class="fd-sep">┃</span>
+ <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Acme.SaaS.Infrastructure.Tests</span> <span class="fd-comment">// Integration — InMemory DB</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">GenericRepositoryTests.cs</span>   <span class="fd-comment">// CRUD + Tenant Filtering</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">UnitOfWorkTests.cs</span>          <span class="fd-comment">// Transaction Atomicity</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">TenantInterceptorTests.cs</span>   <span class="fd-comment">// Auto TenantId Assignment</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">PasswordHasherTests.cs</span>      <span class="fd-comment">// BCrypt Hashing</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">FeatureGatingTests.cs</span>       <span class="fd-comment">// Plan-Based Access</span>
+ <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">TaxStrategyTests.cs</span>         <span class="fd-comment">// Per-Tenant Strategy</span>
+ <span class="fd-sep">┃</span>
+ <span class="fd-sep">┗━━</span> <span class="fd-folder">📂 Acme.SaaS.API.Tests</span>        <span class="fd-comment">// HTTP — WebApplicationFactory</span>
+      <span class="fd-sep">┣</span> <span class="fd-file">TenantsControllerTests.cs</span>  <span class="fd-comment">// Tenant Endpoints</span>
+      <span class="fd-sep">┣</span> <span class="fd-file">AuthControllerTests.cs</span>     <span class="fd-comment">// Login/Register API</span>
+      <span class="fd-sep">┣</span> <span class="fd-file">ProductsControllerTests.cs</span> <span class="fd-comment">// Product CRUD API</span>
+      <span class="fd-sep">┣</span> <span class="fd-file">BillingControllerTests.cs</span>  <span class="fd-comment">// Billing API</span>
+      <span class="fd-sep">┣</span> <span class="fd-file">ExceptionHandlingTests.cs</span>  <span class="fd-comment">// Error Responses</span>
+      <span class="fd-sep">┣</span> <span class="fd-file">TenantResolutionTests.cs</span>   <span class="fd-comment">// Subdomain/Header/JWT</span>
+      <span class="fd-sep">┗</span> <span class="fd-file">PipelineOrderTests.cs</span>      <span class="fd-comment">// Middleware Sequence</span></pre>
+    </div>
+  </div>
+
+  <div class="dual-grid">
+    <div class="dual-card" style="border-top:2px solid var(--green)">
+      <h3 style="color:var(--green)">🟢 Domain.Tests — Pure Unit</h3>
+      <p>
+        بتختبر الـ Business Logic من غير Mocks ولا Database.<br><br>
+        <strong>ProductTests.cs</strong> — يتأكد إن الـ Product ما ينفعش يتعمل من غير Name أو Price أقل من صفر.<br>
+        <strong>MoneyTests.cs</strong> — يتأكد إن 100 دولار = 100 دولار و 100 دولار ≠ 200 دولار.<br>
+        <strong>DomainExceptionTests.cs</strong> — يتأكد من رسائل الخطأ و State Transitions.
+      </p>
+    </div>
+    <div class="dual-card" style="border-top:2px solid var(--purple)">
+      <h3 style="color:var(--purple)">🟣 Application.Tests — Use Cases</h3>
+      <p>
+        بتختبر الـ Mini-Services باستخدام Mocks بدل الـ Infrastructure الحقيقي.<br><br>
+        <strong>TenantServiceTests.cs</strong> — يتأكد إن إنشاء Tenant بيحط SchemaName و Status صح.<br>
+        <strong>AuthServiceTests.cs</strong> — يتأكد إن Login بيعمل Return Token والـ Register بيعمل Hash للـ Password.<br>
+        <strong>MappingProfileTests.cs</strong> — يتأكد إن AutoMapper Config سليم ومفيش Mapping غلط.
+      </p>
+    </div>
+    <div class="dual-card" style="border-top:2px solid var(--orange)">
+      <h3 style="color:var(--orange)">🟠 Infrastructure.Tests — Integration</h3>
+      <p>
+        بتختبر الـ EF Core والـ Repositories باستخدام InMemory Database.<br><br>
+        <strong>GenericRepositoryTests.cs</strong> — يتأكد إن Separate Schema مش بيزود WHERE TenantId، وإن Shared Schema بيعملها.<br>
+        <strong>TenantInterceptorTests.cs</strong> — يتأكد إن الـ Interceptor بيحط TenantId تلقائياً لما تضيف Entity جديدة.<br>
+        <strong>TaxStrategyTests.cs</strong> — يتأكد إن StandardTaxStrategy بتحسب 10% و Vodafone بتحسب 14% + 5.
+      </p>
+    </div>
+    <div class="dual-card" style="border-top:2px solid var(--blue)">
+      <h3 style="color:var(--blue)">🔵 API.Tests — End-to-End</h3>
+      <p>
+        بتختبر الـ HTTP Layer باستخدام WebApplicationFactory (Test Server).<br><br>
+        <strong>TenantResolutionTests.cs</strong> — يتأكد إن Subdomain tenant1.localhost بيجيب TenantId الصح.<br>
+        <strong>ExceptionHandlingTests.cs</strong> — يتأكد إن NotFound بيرجع 408 (كده غلط، يقصد 404) وValidation بيرجع 400 مع Errors.<br>
+        <strong>PipelineOrderTests.cs</strong> — يتأكد إن الـ Middlewares شغالة بالترتيب الصح.
+      </p>
+    </div>
+  </div>
+
+  <div class="info-box green">
+    <span class="ib-icon">🎯</span>
+    <p><strong>Testing Strategy:</strong><br>
+    Domain: Pure Unit — أسرع Tests (ملي ثانية).<br>
+    Application: Unit مع Mocks — بتركز على الـ Logic مش الـ Infrastructure.<br>
+    Infrastructure: Integration مع InMemory DB — بتختبر الـ SQL Mapping والـ Interceptors.<br>
+    API: Integration مع Test Server — بتختبر الـ HTTP Pipeline كامل من البداية للنهاية.</p>
+  </div>
+</section>
+
+<!-- ════════════════ 8. Pipeline Flow ════════════════ -->
 <section class="section fade-in" id="flow">
-  <h2 class="section-title"><span class="num">٧</span> Pipeline Flow — The Request Lifecycle</h2>
+  <h2 class="section-title"><span class="num">٨</span> Pipeline Flow — The Request Lifecycle</h2>
 
   <div class="diagram-box">
     <div class="diagram-title">Single Request Journey: From URL to Database</div>

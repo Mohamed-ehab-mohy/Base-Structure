@@ -229,9 +229,16 @@ Controller → MiniService
 
 ## Documentation
 
-- `folder-directory-map.md` — directory responsibilities
+- `folder-directory-map.md` — directory and file responsibilities (detailed file-by-file)
 - `migration-changelog.md` — architectural shifts, bug fixes, decision records
 - `folder_structure.html` — interactive visual map (Arabic/English)
+- `src/Acme.SaaS.Domain/README.md` — Domain layer: entities, enums, exceptions (file-by-file)
+- `src/Acme.SaaS.Application/README.md` — Application layer: Mini-Services, interfaces, DTOs
+- `src/Acme.SaaS.Infrastructure/README.md` — Infrastructure: multi-tenancy, persistence, services
+- `src/Acme.SaaS.API/README.md` — API: controllers, middlewares, configuration
+- `tests/README.md` — Test projects overview
+
+Every project folder now has a comprehensive README.md documenting each file's purpose and behavior.
 
 ---
 
