@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="WelcomeMessage" xml:space="preserve">
+    <value>Welcome to our system</value>
+  </data>
+  <data name="ErrorMessage" xml:space="preserve">
+    <value>An unexpected error occurred</value>
+  </data>
+</root>

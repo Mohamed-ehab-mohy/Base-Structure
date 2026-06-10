@@ -3,1243 +3,942 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SaaS Clean Architecture — Base Structure</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<title>.NET Clean Architecture — CQRS + MediatR</title>
 <style>
-  :root {
-    --bg:        #0b0f1a;
-    --surface:   #111827;
-    --card:      #1a2235;
-    --border:    #1f2d45;
-    --green:     #22d3a0;
-    --blue:      #38bdf8;
-    --orange:    #fb923c;
-    --purple:    #a78bfa;
-    --yellow:    #fbbf24;
-    --red:       #f87171;
-    --text:      #e2e8f0;
-    --muted:     #94a3b8;
-    --code-bg:   #0d1a2d;
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'IBM Plex Sans Arabic', sans-serif;
-    font-size: 17px;
-    line-height: 1.85;
-    min-height: 100vh;
-  }
-
-  nav {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(11,15,26,.92);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
-    padding: 0 2rem;
-    display: flex; align-items: center; gap: 1.5rem;
-    height: 56px; overflow-x: auto; white-space: nowrap;
-  }
-  nav .logo {
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--green); font-size: .85rem; font-weight: 600;
-    letter-spacing: .05em; flex-shrink: 0; margin-left: auto;
-  }
-  nav a {
-    color: var(--muted); text-decoration: none;
-    font-size: .83rem; font-weight: 500;
-    transition: color .2s; flex-shrink: 0;
-  }
-  nav a:hover { color: var(--text); }
-
-  .hero {
-    padding: 5rem 2rem 3rem;
-    max-width: 900px; margin: 0 auto; text-align: center;
-  }
-  .hero .badge {
-    display: inline-block;
-    background: rgba(34,211,160,.12);
-    border: 1px solid rgba(34,211,160,.3);
-    color: var(--green);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: .75rem; padding: .35rem .9rem;
-    border-radius: 999px; margin-bottom: 1.5rem; letter-spacing: .08em;
-  }
-  .hero h1 {
-    font-size: clamp(2rem, 5vw, 3.2rem);
-    font-weight: 700; line-height: 1.2; margin-bottom: 1rem;
-    background: linear-gradient(135deg, #e2e8f0 30%, #22d3a0);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
-  .hero .subtitle {
-    color: var(--muted); font-size: 1rem; max-width: 600px; margin: 0 auto 1.5rem;
-  }
-  .pill-row { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; margin-top: 1.5rem; }
-  .pill {
-    background: var(--card); border: 1px solid var(--border);
-    color: var(--muted); font-size: .78rem; font-family: 'JetBrains Mono', monospace;
-    padding: .3rem .85rem; border-radius: 999px;
-  }
-
-  .content { max-width: 900px; margin: 0 auto; padding: 0 2rem 6rem; }
-  .section { margin-bottom: 5rem; scroll-margin-top: 70px; }
-
-  .section-title {
-    display: flex; align-items: center; gap: .75rem;
-    font-size: 1.45rem; font-weight: 700;
-    margin-bottom: 1.5rem; padding-bottom: .75rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .section-title .num {
-    font-family: 'JetBrains Mono', monospace; font-size: .85rem;
-    color: var(--green);
-    background: rgba(34,211,160,.1); border: 1px solid rgba(34,211,160,.25);
-    width: 32px; height: 32px;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 8px; flex-shrink: 0;
-  }
-
-  .card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem;
-  }
-  .card-accent-blue   { border-right: 3px solid var(--blue); }
-  .card-accent-green  { border-right: 3px solid var(--green); }
-  .card-accent-orange { border-right: 3px solid var(--orange); }
-  .card-accent-purple { border-right: 3px solid var(--purple); }
-  .card-accent-yellow { border-right: 3px solid var(--yellow); }
-  .card-accent-red    { border-right: 3px solid var(--red); }
-  .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: .5rem; }
-  .card p  { font-size: .9rem; color: var(--muted); line-height: 1.75; }
-
-  .term-list { display: flex; flex-direction: column; gap: .7rem; }
-  .term-row {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1rem 1.25rem;
-    display: grid; grid-template-columns: auto 1fr;
-    gap: .6rem 1.25rem; align-items: start;
-  }
-  .term-label {
-    font-family: 'JetBrains Mono', monospace; font-size: .8rem; font-weight: 600;
-    color: var(--blue); background: rgba(56,189,248,.1); border: 1px solid rgba(56,189,248,.2);
-    padding: .25rem .65rem; border-radius: 6px;
-    white-space: nowrap; align-self: start; margin-top: .15rem;
-  }
-  .term-label.green  { color: var(--green);  background: rgba(34,211,160,.1);  border-color: rgba(34,211,160,.2); }
-  .term-label.orange { color: var(--orange); background: rgba(251,146,60,.1);  border-color: rgba(251,146,60,.2); }
-  .term-label.purple { color: var(--purple); background: rgba(167,139,250,.1); border-color: rgba(167,139,250,.2); }
-  .term-label.red    { color: var(--red);    background: rgba(248,113,113,.1); border-color: rgba(248,113,113,.2); }
-  .term-label.yellow { color: var(--yellow); background: rgba(251,191,36,.1);  border-color: rgba(251,191,36,.2); }
-  .term-desc { color: var(--muted); font-size: .9rem; line-height: 1.7; }
-
-  .steps-grid { display: flex; flex-direction: column; gap: .75rem; margin: 1.25rem 0; }
-  .step-card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1.1rem 1.25rem;
-    display: grid; grid-template-columns: auto 1fr;
-    gap: .75rem 1.25rem; align-items: start;
-  }
-  .step-badge {
-    font-family: 'JetBrains Mono', monospace; font-size: .8rem; font-weight: 700;
-    width: 36px; height: 36px; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  }
-  .step-badge.blue   { background: rgba(56,189,248,.15);  color: var(--blue); }
-  .step-badge.green  { background: rgba(34,211,160,.15);  color: var(--green); }
-  .step-badge.orange { background: rgba(251,146,60,.15);  color: var(--orange); }
-  .step-badge.purple { background: rgba(167,139,250,.15); color: var(--purple); }
-  .step-badge.red    { background: rgba(248,113,113,.15); color: var(--red); }
-  .step-body h4 {
-    font-family: 'JetBrains Mono', monospace; font-size: .88rem; font-weight: 700;
-    margin-bottom: .25rem; color: var(--text);
-  }
-  .step-body p { font-size: .88rem; color: var(--muted); line-height: 1.7; }
-
-  .dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.25rem 0; }
-  .dual-card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1.25rem;
-  }
-  .dual-card h3 { font-size: .93rem; font-weight: 700; margin-bottom: .6rem; }
-  .dual-card p  { font-size: .87rem; color: var(--muted); line-height: 1.7; }
-
-  .method-header {
-    display: flex; align-items: center; gap: 1rem;
-    margin-bottom: 1rem;
-  }
-  .method-icon {
-    width: 44px; height: 44px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.3rem; flex-shrink: 0;
-  }
-  .method-icon.green  { background: rgba(34,211,160,.15); }
-  .method-icon.blue   { background: rgba(56,189,248,.15); }
-  .method-icon.orange { background: rgba(251,146,60,.15); }
-  .method-icon.purple { background: rgba(167,139,250,.15); }
-  .method-meta { flex: 1; }
-  .method-meta h3 {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1rem; font-weight: 700; margin-bottom: .15rem;
-  }
-  .method-meta span { font-size: .82rem; color: var(--muted); }
-
-  .code-block {
-    background: var(--code-bg); border: 1px solid var(--border);
-    border-radius: 10px; padding: 1rem 1.25rem; margin: 1rem 0;
-    direction: ltr; overflow-x: auto;
-  }
-  .code-block pre {
-    font-family: 'JetBrains Mono', monospace; font-size: .82rem;
-    color: #e2e8f0; line-height: 1.7; white-space: pre;
-  }
-  .code-block .kw  { color: #a78bfa; }
-  .code-block .at  { color: #38bdf8; }
-  .code-block .st  { color: #22d3a0; }
-  .code-block .cm  { color: #475569; font-style: italic; }
-  .code-block .nm  { color: #fb923c; }
-  .code-block .cl  { color: #fbbf24; }
-
-  .info-box {
-    border-radius: 12px; padding: 1rem 1.25rem;
-    display: flex; gap: .85rem; align-items: flex-start;
-    margin: 1.25rem 0; font-size: .9rem;
-  }
-  .info-box.blue   { background: rgba(56,189,248,.07);  border: 1px solid rgba(56,189,248,.2);  color: #bae6fd; }
-  .info-box.green  { background: rgba(34,211,160,.07);  border: 1px solid rgba(34,211,160,.2);  color: #6ee7b7; }
-  .info-box.orange { background: rgba(251,146,60,.07);  border: 1px solid rgba(251,146,60,.2);  color: #fed7aa; }
-  .info-box.purple { background: rgba(167,139,250,.07); border: 1px solid rgba(167,139,250,.2); color: #ddd6fe; }
-  .info-box.yellow { background: rgba(251,191,36,.07);  border: 1px solid rgba(251,191,36,.2);  color: #fde68a; }
-  .info-box .ib-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: .05rem; }
-  .info-box p { line-height: 1.7; }
-
-  .diagram-box {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 1.5rem; margin: 1.5rem 0; overflow-x: auto;
-    direction: ltr;
-  }
-  .diagram-box .diagram-title {
-    font-size: .75rem; color: var(--muted); text-align: center;
-    margin-bottom: 1.25rem; font-family: 'JetBrains Mono', monospace;
-    letter-spacing: .06em; text-transform: uppercase;
-  }
-  .diag-svg { display: block; margin: 0 auto; max-width: 100%; }
-
-  .folder-display {
-    background: var(--code-bg); border: 1px solid var(--border);
-    border-radius: 10px; padding: 1rem 1.25rem; margin: 1rem 0;
-    direction: ltr; overflow-x: auto;
-  }
-  .folder-display pre {
-    font-family: 'JetBrains Mono', monospace; font-size: .8rem;
-    color: #e2e8f0; line-height: 1.85; white-space: pre;
-  }
-  .folder-display .fd-project { color: var(--blue); font-weight: 700; }
-  .folder-display .fd-folder  { color: var(--yellow); }
-  .folder-display .fd-file    { color: #e2e8f0; }
-  .folder-display .fd-comment { color: #475569; font-size: .75rem; }
-  .folder-display .fd-sep     { color: #1f2d45; }
-
-  .three-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin: 1.25rem 0; }
-  .three-card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1.1rem;
-    display: flex; flex-direction: column; gap: .4rem;
-  }
-  .three-card .tc-label {
-    font-family: 'JetBrains Mono', monospace; font-size: .75rem; font-weight: 700;
-    color: var(--muted); letter-spacing: .05em; text-transform: uppercase;
-  }
-  .three-card .tc-val { font-size: .88rem; color: var(--text); font-weight: 600; }
-  .three-card .tc-desc { font-size: .82rem; color: var(--muted); line-height: 1.6; }
-
-  .comp-table-wrap { overflow-x: auto; margin: 1.5rem 0; border-radius: 12px; border: 1px solid var(--border); }
-  .comp-table {
-    width: 100%; border-collapse: collapse;
-    font-size: .87rem;
-  }
-  .comp-table thead tr {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-  }
-  .comp-table thead th {
-    padding: .85rem 1.1rem; text-align: right;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: .78rem; font-weight: 600;
-    color: var(--muted); letter-spacing: .04em;
-    white-space: nowrap;
-  }
-  .comp-table tbody tr {
-    border-bottom: 1px solid var(--border);
-    transition: background .15s;
-  }
-  .comp-table tbody tr:last-child { border-bottom: none; }
-  .comp-table tbody tr:hover { background: rgba(255,255,255,.025); }
-  .comp-table tbody td {
-    padding: .85rem 1.1rem; vertical-align: middle;
-    color: var(--muted); line-height: 1.6;
-  }
-  .comp-table tbody td:first-child {
-    font-family: 'JetBrains Mono', monospace; font-size: .82rem;
-    font-weight: 700; white-space: nowrap;
-  }
-  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin: 0 2px; }
-  .dot.on  { background: var(--green); }
-  .dot.off { background: var(--border); }
-
-  .tb-badge {
-    display: inline-block; font-family: 'JetBrains Mono', monospace;
-    font-size: .72rem; font-weight: 600; padding: .2rem .55rem;
-    border-radius: 5px; white-space: nowrap;
-  }
-  .tb-badge.green  { color: var(--green);  background: rgba(34,211,160,.1);  border: 1px solid rgba(34,211,160,.2); }
-  .tb-badge.blue   { color: var(--blue);   background: rgba(56,189,248,.1);  border: 1px solid rgba(56,189,248,.2); }
-  .tb-badge.orange { color: var(--orange); background: rgba(251,146,60,.1);  border: 1px solid rgba(251,146,60,.2); }
-  .tb-badge.purple { color: var(--purple); background: rgba(167,139,250,.1); border: 1px solid rgba(167,139,250,.2); }
-
-  .recommend-box {
-    background: linear-gradient(135deg, rgba(34,211,160,.06) 0%, rgba(56,189,248,.06) 100%);
-    border: 1px solid rgba(34,211,160,.25);
-    border-radius: 16px; padding: 1.75rem; margin: 1.5rem 0;
-  }
-  .recommend-box h3 {
-    font-size: 1.05rem; font-weight: 700; margin-bottom: .75rem;
-    color: var(--green);
-  }
-  .recommend-box p { font-size: .9rem; color: var(--muted); line-height: 1.8; margin-bottom: .6rem; }
-  .recommend-box p:last-child { margin-bottom: 0; }
-
-  .quote-box {
-    background: var(--card); border: 1px solid var(--border);
-    border-right: 4px solid var(--yellow);
-    border-radius: 0 12px 12px 0;
-    padding: 1.25rem 1.5rem; margin: 1.5rem 0;
-    font-size: .95rem; color: var(--text); line-height: 1.8;
-  }
-  .quote-box strong { color: var(--yellow); }
-
-  .fade-in { opacity: 0; transform: translateY(18px); transition: opacity .5s ease, transform .5s ease; }
-  .fade-in.visible { opacity: 1; transform: none; }
-
-  footer {
-    border-top: 1px solid var(--border); background: var(--surface);
-    padding: 1.5rem 2rem;
-  }
-  .footer-inner {
-    max-width: 900px; margin: 0 auto;
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
-  }
-  .footer-title { font-family: 'JetBrains Mono', monospace; font-size: .82rem; color: var(--muted); }
-  .footer-links { display: flex; gap: 1.25rem; }
-  .footer-link {
-    color: var(--muted); text-decoration: none; font-size: .82rem;
-    display: flex; align-items: center; gap: .4rem; transition: color .2s;
-  }
-  .footer-link:hover { color: var(--text); }
-
-  @media (max-width: 640px) {
-    .dual-grid  { grid-template-columns: 1fr; }
-    .three-grid { grid-template-columns: 1fr; }
-    nav { gap: 1rem; padding: 0 1rem; }
-    .content { padding: 0 1rem 4rem; }
-    .hero { padding: 3rem 1rem 2rem; }
-  }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; padding: 20px; min-height: 100vh; font-size: 18px; line-height: 1.8; }
+.container { max-width: 1600px; margin: 0 auto; background: white; border-radius: 15px; padding: 50px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+h1 { text-align: center; color: #1a1a1a; margin-bottom: 50px; font-size: 3em; font-weight: bold; border-bottom: 5px solid #512bd4; padding-bottom: 25px; }
+.section { margin-bottom: 60px; }
+.section-title { background: linear-gradient(135deg, #512bd4 0%, #6c3fb5 100%); color: white; padding: 20px 30px; border-radius: 12px; margin-bottom: 30px; font-size: 1.8em; font-weight: bold; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.tree { background: #ffffff; padding: 30px; border-radius: 12px; border: 3px solid #e0e0e0; font-family: 'Courier New', monospace; overflow-x: auto; font-size: 16px; }
+.tree ul { list-style: none; padding-right: 20px; }
+.tree li { margin: 12px 0; position: relative; font-size: 16px; }
+.tree .folder, .tree .file { cursor: pointer; padding: 10px 15px; border-radius: 8px; display: inline-flex; align-items: center; gap: 10px; transition: all 0.3s; font-weight: 600; flex-wrap: wrap; }
+.tree .folder:hover, .tree .file:hover { background: #f0f4ff; transform: translateX(-5px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.tree .folder::before { content: "\1F4C1"; margin-left: 8px; font-size: 18px; }
+.tree .file::before { content: "\1F4C4"; margin-left: 8px; font-size: 18px; }
+.tree .file.cs { color: #68217a; font-weight: bold; }
+.tree .file.json { color: #27ae60; font-weight: bold; }
+.tree .file.config { color: #c0392b; font-weight: bold; }
+.tree .file.md { color: #2980b9; font-weight: bold; }
+.tree .file.sln { color: #512bd4; font-weight: bold; }
+.tree .file.csproj { color: #68217a; font-weight: bold; }
+.tree .children { padding-right: 30px; border-right: 3px solid #d0d0d0; margin-right: 10px; }
+.tree .collapsed > .children { display: none; }
+.tree .toggle { display: inline-block; width: 28px; height: 28px; text-align: center; line-height: 28px; border-radius: 6px; background: #512bd4; color: white; font-size: 18px; margin-left: 8px; user-select: none; font-weight: bold; }
+.tree .collapsed > .folder > .toggle::before { content: "+"; }
+.tree .folder > .toggle::before { content: "\2212"; }
+.file-description { display: block; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 14px; color: #444; font-weight: normal; margin-top: 5px; padding: 10px 15px; background: #f8f9fa; border-radius: 6px; border-right: 3px solid #512bd4; line-height: 1.7; width: 100%; }
+.folder-description { display: block; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 14px; color: #444; font-weight: normal; margin-top: 5px; padding: 10px 15px; background: #fff8e1; border-radius: 6px; border-right: 3px solid #ffc107; line-height: 1.7; width: 100%; }
+.description-icon { margin-left: 5px; font-size: 16px; }
+.highlight-domain { animation: pulse-domain 2s ease-in-out; box-shadow: 0 0 20px #e74c3c !important; }
+.highlight-application { animation: pulse-application 2s ease-in-out; box-shadow: 0 0 20px #3498db !important; }
+.highlight-infrastructure { animation: pulse-infrastructure 2s ease-in-out; box-shadow: 0 0 20px #2ecc71 !important; }
+.highlight-presentation { animation: pulse-presentation 2s ease-in-out; box-shadow: 0 0 20px #f39c12 !important; }
+@keyframes pulse-domain { 0%, 100% { transform: scale(1); border: 5px solid #e74c3c; } 50% { transform: scale(1.02); border: 5px solid #c0392b; } }
+@keyframes pulse-application { 0%, 100% { transform: scale(1); border: 5px solid #3498db; } 50% { transform: scale(1.02); border: 5px solid #2980b9; } }
+@keyframes pulse-infrastructure { 0%, 100% { transform: scale(1); border: 5px solid #2ecc71; } 50% { transform: scale(1.02); border: 5px solid #27ae60; } }
+@keyframes pulse-presentation { 0%, 100% { transform: scale(1); border: 5px solid #f39c12; } 50% { transform: scale(1.02); border: 5px solid #e67e22; } }
+.architecture { display: flex; flex-direction: column; gap: 20px; align-items: center; }
+.layer { width: 100%; max-width: 900px; padding: 30px; border-radius: 12px; text-align: center; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.15); transition: all 0.3s; border: 3px solid transparent; cursor: pointer; }
+.layer:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.layer h3 { margin-bottom: 15px; font-size: 1.6em; font-weight: bold; }
+.layer p { font-size: 1.1em; line-height: 1.8; }
+.domain { background: #fde8e8; color: #c0392b; border-color: #e74c3c; }
+.application { background: #e3f2fd; color: #1565c0; border-color: #3498db; }
+.infrastructure { background: #e8f5e9; color: #2e7d32; border-color: #2ecc71; }
+.presentation { background: #fff3e0; color: #e65100; border-color: #f39c12; }
+.arrow { font-size: 2.5em; color: #512bd4; font-weight: bold; animation: bounce 2s infinite; }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(10px); } }
+.flow-container { display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 20px; margin: 30px 0; padding: 40px; background: #fafafa; border-radius: 12px; border: 2px solid #e0e0e0; }
+.flow-box { padding: 20px 30px; border-radius: 10px; font-weight: bold; text-align: center; min-width: 160px; font-size: 1.2em; box-shadow: 0 4px 10px rgba(0,0,0,0.15); border: 3px solid rgba(0,0,0,0.1); cursor: pointer; transition: all 0.3s; }
+.flow-box:hover { transform: scale(1.1); }
+.flow-box.presentation { background: #f39c12; color: white; }
+.flow-box.application { background: #3498db; color: white; }
+.flow-box.domain { background: #e74c3c; color: white; }
+.flow-box.infrastructure { background: #2ecc71; color: white; }
+.flow-arrow { font-size: 2em; color: #512bd4; font-weight: bold; }
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-top: 30px; }
+.feature-card { background: white; border: 3px solid #512bd4; border-radius: 12px; padding: 30px; text-align: center; transition: all 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+.feature-card:hover { transform: translateY(-8px); box-shadow: 0 10px 30px rgba(81, 43, 212, 0.3); }
+.feature-card h4 { color: #512bd4; margin-bottom: 20px; font-size: 1.5em; font-weight: bold; }
+.feature-card ul { list-style: none; text-align: right; font-size: 1.1em; color: #333; }
+.feature-card li { padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+.feature-card li:last-child { border-bottom: none; }
+.feature-card li::before { content: "\2713 "; color: #27ae60; margin-left: 8px; font-weight: bold; font-size: 1.2em; }
+.practices { background: #f8f9ff; padding: 30px; border-radius: 12px; border-right: 6px solid #512bd4; border: 2px solid #e0e0e0; }
+.practices ul { list-style: none; padding: 0; }
+.practices li { padding: 20px; margin: 15px 0; background: white; border-radius: 8px; display: flex; align-items: flex-start; gap: 15px; transition: all 0.3s; font-size: 1.1em; border: 2px solid #e8e8e8; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; }
+.practices li:hover { transform: translateX(-8px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-color: #512bd4; background: #f0f4ff; }
+.practices li::before { content: ""; font-size: 1.5em; flex-shrink: 0; }
+.practice-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; margin-left: 10px; color: white; }
+.tag-domain { background: #e74c3c; }
+.tag-application { background: #3498db; }
+.tag-infrastructure { background: #2ecc71; }
+.tag-presentation { background: #f39c12; }
+.tag-general { background: #9c27b0; }
+.practice-example { display: none; margin-top: 15px; padding: 15px; background: #1e1e1e; border-radius: 8px; color: #d4d4d4; font-family: 'Courier New', monospace; font-size: 0.9em; line-height: 1.6; overflow-x: auto; }
+.practice-example.show { display: block; animation: slideDown 0.3s ease-out; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+.code-keyword { color: #569cd6; }
+.code-type { color: #4ec9b0; }
+.code-string { color: #ce9178; }
+.code-comment { color: #6a9955; }
+.code-method { color: #dcdcaa; }
+.code-attribute { color: #d7ba7d; }
+.legend { display: flex; justify-content: center; gap: 25px; flex-wrap: wrap; margin: 30px 0; padding: 25px; background: #ffffff; border-radius: 12px; border: 2px solid #e0e0e0; }
+.legend-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); font-size: 1.1em; font-weight: 600; border: 2px solid #e0e0e0; }
+.legend-color { width: 30px; height: 30px; border-radius: 5px; border: 2px solid rgba(0,0,0,0.1); }
+.info-box { background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 20px; margin: 20px 0; display: flex; align-items: center; gap: 15px; }
+.info-box-icon { font-size: 2em; }
+.info-box-text { color: #856404; font-size: 1.1em; }
+.cqrs-diagram { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0; }
+.cqrs-box { padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border: 3px solid transparent; }
+.cqrs-box h3 { margin-bottom: 15px; font-size: 1.5em; }
+.cqrs-command { background: #e3f2fd; color: #1565c0; border-color: #3498db; }
+.cqrs-query { background: #e8f5e9; color: #2e7d32; border-color: #2ecc71; }
+@media (max-width: 768px) { .container { padding: 30px; } h1 { font-size: 2.2em; } .section-title { font-size: 1.4em; } .flow-container { flex-direction: column; } .flow-arrow { transform: rotate(90deg); } .tree { font-size: 14px; } .file-description, .folder-description { font-size: 12px; } .cqrs-diagram { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
+<div class="container">
+    <h1>.NET Clean Architecture — CQRS + MediatR</h1>
 
-<nav>
-  <a href="#philosophy">Philosophy</a>
-  <a href="#structure">Structure</a>
-  <a href="#domain">Domain</a>
-  <a href="#application">Application</a>
-  <a href="#infrastructure">Infrastructure</a>
-  <a href="#presentation">API</a>
-  <a href="#tests">Tests</a>
-  <a href="#flow">Pipeline Flow</a>
-  <span class="logo">SaaS · Clean Architecture</span>
-</nav>
-
-<div class="hero">
-  
-  <h1>SaaS Multi-Tenant<br>Base Structure</h1>
-  <div class="subtitle">Standard Clean Architecture + Mini-Services + Multi-Tenancy Layer<br></div>
-  <div class="pill-row">
-    <span class="pill">Projects</span>
-    <span class="pill">Mini-Services</span>
-    <span class="pill">Separate Schema</span>
-    <span class="pill">Feature Gating</span>
-    <span class="pill">Row-Level Security</span>
-  </div>
-</div>
-
-<main class="content">
-
-<!-- ════════════════ 1. Design Philosophy ════════════════ -->
-<section class="section fade-in" id="philosophy">
-  <h2 class="section-title"><span class="num">١</span> Base Structure — Design Philosophy</h2>
-
-  <div class="steps-grid">
-    <div class="step-card">
-      <div class="step-badge green">١</div>
-      <div class="step-body">
-        <h4>Multi-Tenancy Isolation</h4>
-        <p>الـ Tenant Detection والـ Dynamic Schema/Connection Strings كلها معزولة تماماً جوه الـ Infrastructure Layer. الـ Core Domain و Application ميعرفوش عن الـ Tenancy حاجة — هما شغالين في سياق Tenant واحد من غير ما يدروا.</p>
-      </div>
+    <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background: #e74c3c;"></div><span>Domain Layer</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #3498db;"></div><span>Application Layer</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #2ecc71;"></div><span>Infrastructure Layer</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #f39c12;"></div><span>Presentation Layer</span></div>
     </div>
-    <div class="step-card">
-      <div class="step-badge blue">٢</div>
-      <div class="step-body">
-        <h4>Standard Clean Architecture (Horizontal Slicing)</h4>
-        <p>اخترتها لسرعة الـ Delivery. Projects بس — Domain, Application, Infrastructure, Presentation. أي Developer جديد يفهمها في يوم.</p>
-      </div>
-    </div>
-    <div class="step-card">
-      <div class="step-badge orange">٣</div>
-      <div class="step-body">
-        <h4>Mini-Services Inside the Application Layer</h4>
-        <p>بدل ما أعمل CQRS (تعقيد مش محتاجه دلوقتي)، بقسم الـ Application لـ Mini-Services صغيرة — كل Service ليها Interface و Implementation خاص بيها. بمنع الـ God Classes وأحافظ على Single Responsibility من غير Over-engineering.</p>
-      </div>
-    </div>
-    <div class="step-card">
-      <div class="step-badge purple">٤</div>
-      <div class="step-body">
-        <h4>Feature Gating &amp; Row-Level Security</h4>
-        <p>مدمجة مركزياً في الـ Pipeline والـ Base Repositories. بتحكم في الـ Plans والباقات لكل Tenant من مكان واحد — مش هفضل أضيف <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">if (tenant.Plan == "Free")</code> في كل Controller.</p>
-      </div>
-    </div>
-  </div>
-</section>
 
-<!-- ════════════════ 2. Full Solution Structure ════════════════ -->
-<section class="section fade-in" id="structure">
-  <h2 class="section-title"><span class="num">٢</span> Full Solution Structure — Projects</h2>
-
-  <div class="diagram-box">
-    <div class="diagram-title">Acme.SaaS.sln — Projects: Domain · Application · Infrastructure · API</div>
-    <div class="folder-display">
-<pre><span class="fd-project">📦 Acme.SaaS.sln</span>
- <span class="fd-sep">┃</span>
- <span class="fd-sep">┣━━</span> <span class="fd-project">📂 01. Acme.SaaS.Domain</span>         <span class="fd-comment">// نواة النظام — ملهاش Dependency</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Common/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">BaseEntity.cs</span>             <span class="fd-comment">// Id (Guid), CreatedAt, CreatedBy</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">BaseAuditableEntity.cs</span>    <span class="fd-comment">// + UpdatedAt, UpdatedBy, IsDeleted</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">ValueObject.cs</span>            <span class="fd-comment">// Base for DDD Value Objects</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">ITenantEntity.cs</span>          <span class="fd-comment">// TenantId contract for Shared Schema</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Entities/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">Tenant.cs</span>                  <span class="fd-comment">// Identifier, SchemaName, ConnectionString, Plan, Status</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">User.cs</span>                    <span class="fd-comment">// Email, PasswordHash, IsActive, Roles[], TenantId</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">Role.cs</span>                    <span class="fd-comment">// Name, Permissions[]</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">Product.cs</span>                  <span class="fd-comment">// Example — حسب Domain مشروعك</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Enums/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">TenantStatus.cs</span>            <span class="fd-comment">// Active, Suspended, Trial, Expired</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">SubscriptionPlan.cs</span>        <span class="fd-comment">// Free, Pro, Enterprise</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">UserRole.cs</span>                 <span class="fd-comment">// SuperAdmin, TenantAdmin, Member</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┗━━</span> <span class="fd-folder">📂 Exceptions/</span>
- <span class="fd-sep">┃</span>       <span class="fd-sep">┣</span> <span class="fd-file">DomainException.cs</span>          <span class="fd-comment">// Base Domain Exception → 400</span>
- <span class="fd-sep">┃</span>       <span class="fd-sep">┗</span> <span class="fd-file">NotFoundException.cs</span>        <span class="fd-comment">// → 404</span>
- <span class="fd-sep">┃</span>
- <span class="fd-sep">┣━━</span> <span class="fd-project">📂 02. Acme.SaaS.Application</span>      <span class="fd-comment">// Business Logic — Mini-Services</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Common/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Interfaces/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">IApplicationDbContext.cs</span>   <span class="fd-comment">// Abstraction for EF Core</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">ITenantProvider.cs</span>          <span class="fd-comment">// Get current TenantId, Schema, Plan</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">ICurrentUserService.cs</span>      <span class="fd-comment">// Logged-in UserId, Roles, TenantId</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">IUnitOfWork.cs</span>              <span class="fd-comment">// Transactional consistency</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">IGenericRepository.cs</span>       <span class="fd-comment">// CRUD abstraction</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">IPasswordHasher.cs</span>          <span class="fd-comment">// BCrypt abstraction</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Behaviors/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">LoggingBehavior.cs</span>          <span class="fd-comment">// تسجيل كل Request</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">ValidationBehavior.cs</span>       <span class="fd-comment">// FluentValidation (مستقبلي)</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Mapping/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">MappingProfile.cs</span>           <span class="fd-comment">// AutoMapper / Mapster</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 DTOs/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">PagedResult.cs</span>              <span class="fd-comment">// Pagination wrapper</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">ApiResponse.cs</span>              <span class="fd-comment">// Unified response</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗━━</span> <span class="fd-folder">📂 Exceptions/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>       <span class="fd-sep">┣</span> <span class="fd-file">ValidationException.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>       <span class="fd-sep">┗</span> <span class="fd-file">ForbiddenException.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 MiniServices/</span>                <span class="fd-comment">// ⭐ قلب الـ Business Logic</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Tenants/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">ITenantService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">TenantService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Identity/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">IAuthService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">AuthService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Billing/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">IBillingService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">BillingService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Products/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">IProductService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">ProductService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗━━</span> <span class="fd-folder">📂 [FeatureName]/</span>            <span class="fd-comment">// كل Feature في Mini-Service</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>       <span class="fd-sep">┣</span> <span class="fd-file">I[Feature]Service.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>       <span class="fd-sep">┗</span> <span class="fd-file">[Feature]Service.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┗━━</span> <span class="fd-folder">📂 Extensions/</span>
- <span class="fd-sep">┃</span>       <span class="fd-sep">┗</span> <span class="fd-file">ServiceCollectionExtensions.cs</span>  <span class="fd-comment">// DI Registration</span>
- <span class="fd-sep">┃</span>
- <span class="fd-sep">┣━━</span> <span class="fd-project">📂 03. Acme.SaaS.Infrastructure</span>   <span class="fd-comment">// Multi-Tenancy + Data Access</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 MultiTenancy/</span>               <span class="fd-comment">// ⭐ إدارة الـ Tenants</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">TenancyOptions.cs</span>            <span class="fd-comment">// ⭐ Mode: SeparateSchema / SharedSchema</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Services/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">TenantProvider.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">SchemaService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">TenantConnectionService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗━━</span> <span class="fd-folder">📂 Store/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>       <span class="fd-sep">┗</span> <span class="fd-file">TenantStore.cs</span>              <span class="fd-comment">// Redis / Memory Cache</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Persistence/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Contexts/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">ApplicationDbContext.cs</span>     <span class="fd-comment">// واعي بالـ Tenant — Schema Isolation</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">MasterDbContext.cs</span>         <span class="fd-comment">// Master DB — جدول Tenants بس</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Migrations/</span>               <span class="fd-comment">// ⭐ كل DB ليها Migrations مستقلة</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-folder">📂 Master/</span>              <span class="fd-comment">// 🟢 مرة واحدة — جداول Tenants, Plans</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-folder">📂 Tenant/</span>              <span class="fd-comment">// 🟠 لكل Schema — جداول البيزنس</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Repositories/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">GenericRepository.cs</span>       <span class="fd-comment">// CRUD + Row-Level Security</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">UnitOfWork.cs</span>             <span class="fd-comment">// Transaction scope</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Configurations/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">TenantConfiguration.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">UserConfiguration.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">ProductConfiguration.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗━━</span> <span class="fd-folder">📂 Interceptors/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>       <span class="fd-sep">┣</span> <span class="fd-file">AuditableEntityInterceptor.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>       <span class="fd-sep">┣</span> <span class="fd-file">SoftDeleteInterceptor.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>       <span class="fd-sep">┗</span> <span class="fd-file">TenantInterceptor.cs</span>        <span class="fd-comment">// Mode-aware — Shared Schema فقط</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Services/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Identity/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">JwtTokenService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">CurrentUserService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">PasswordHasher.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 FeatureGating/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">FeatureGatingService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 CustomLogic/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Strategies/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">StandardTaxStrategy.cs</span>    <span class="fd-comment">// Default 10%</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">VodafoneTaxStrategy.cs</span>    <span class="fd-comment">// 14% + 5</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗━━</span> <span class="fd-folder">📂 Factories/</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>       <span class="fd-sep">┗</span> <span class="fd-file">TaxStrategyFactory.cs</span>      <span class="fd-comment">// Tenant-specific Strategy</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">EmailService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">CacheService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">FileStorageService.cs</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┃</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┗━━</span> <span class="fd-folder">📂 Extensions/</span>
- <span class="fd-sep">┃</span>       <span class="fd-sep">┗</span> <span class="fd-file">ServiceCollectionExtensions.cs</span>
- <span class="fd-sep">┃</span>
- <span class="fd-sep">┗━━</span> <span class="fd-project">📂 04. Acme.SaaS.Presentation.API</span>  <span class="fd-comment">// Entry Point</span>
-      <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Controllers/</span>
-      <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">BaseApiController.cs</span>
-      <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">TenantsController.cs</span>
-      <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">AuthController.cs</span>
-      <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">ProductsController.cs</span>
-      <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">BillingController.cs</span>
-      <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Middlewares/</span>
-      <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">TenantResolutionMiddleware.cs</span>  <span class="fd-comment">// ⭐ Subdomain/Header/JWT</span>
-      <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">ExceptionHandlingMiddleware.cs</span>
-      <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">RequestLoggingMiddleware.cs</span>
-      <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Extensions/</span>
-      <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">ServiceCollectionExtensions.cs</span>
-      <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">ApplicationBuilderExtensions.cs</span>
-      <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Filters/</span>
-      <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">SwaggerDefaultValues.cs</span>
-      <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Resources/</span>
-      <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">SharedResources.ar-EG.resx</span>
-      <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">SharedResources.en-US.resx</span>
-      <span class="fd-sep">┣</span> <span class="fd-file">Program.cs</span>
-      <span class="fd-sep">┣</span> <span class="fd-file">appsettings.json</span>
-      <span class="fd-sep">┗</span> <span class="fd-file">appsettings.Development.json</span></pre>
+    <!-- Architecture Diagram -->
+    <div class="section">
+        <div class="section-title"><span>🏗️</span><span>Clean Architecture Layers</span></div>
+        <div class="info-box">
+            <div class="info-box-icon">🎯</div>
+            <div class="info-box-text">
+                <strong>قاعدة الـ Dependency:</strong> الـ Domain مش بيعتمد على أي حاجة. الـ Application بيعتمد على Domain بس. Infrastructure بيعتمد على Application. Presentation بيعتمد على Infrastructure.
+            </div>
+        </div>
+        <div class="architecture">
+            <div class="layer presentation" id="layer-presentation">
+                <h3>Presentation Layer (API)</h3>
+                <p>Controllers ⏐ Middlewares ⏐ Filters ⏐ Models<br>Program.cs ⏐ appsettings.json</p>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="layer application" id="layer-application">
+                <h3>⚙️ Application Layer</h3>
+                <p>CQRS: Commands & Queries ⏐ MediatR Handlers<br>FluentValidation ⏐ AutoMapper ⏐ DTOs</p>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="layer domain" id="layer-domain">
+                <h3>❤️ Domain Layer</h3>
+                <p>Entities ⏐ Value Objects ⏐ Domain Events<br>Enums ⏐ Interfaces ⏐ Exceptions</p>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="layer infrastructure" id="layer-infrastructure">
+                <h3>🔧 Infrastructure Layer</h3>
+                <p>EF Core ⏐ Repositories ⏐ Identity<br>Email ⏐ File Storage ⏐ Payment</p>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div class="info-box green">
-    <span class="ib-icon">🗂️</span>
-    <p>Projects بس — مش 7 ولا 8. قليلين عشان الـ Onboarding سريع، ومقسومين عشان الـ Separation of Concerns. لو عاوز تضيف Project جديد بعدين (زي Shared Kernel أو gRPC)، الـ Structure مهيأ يستقبل من غير ما يتقلب.</p>
-  </div>
-</section>
-
-<!-- ════════════════ 3. Domain ════════════════ -->
-<section class="section fade-in" id="domain">
-  <h2 class="section-title"><span class="num">٣</span> Core.Domain — System Nucleus</h2>
-
-  <div class="card card-accent-green">
-    <div class="method-header">
-      <div class="method-icon green">🧅</div>
-      <div class="method-meta">
-        <h3 style="color:var(--green)">Core.Domain</h3>
-        <span>الطبقة اللي ملهاش Dependency على أي حاجة — لا Libraries خارجية ولا Projects تانية</span>
-      </div>
+    <!-- CQRS Diagram -->
+    <div class="section">
+        <div class="section-title"><span>⚡</span><span>CQRS Pattern (Command Query Responsibility Segregation)</span></div>
+        <div class="info-box">
+            <div class="info-box-icon">🔀</div>
+            <div class="info-box-text">
+                <strong>فصل الـ Commands (اللي بتغير Data) عن الـ Queries (اللي بتقرأ Data بس).</strong> كل واحد ليه Handler منفصل. باستخدام MediatR.
+            </div>
+        </div>
+        <div class="cqrs-diagram">
+            <div class="cqrs-box cqrs-command">
+                <h3>✏️ Commands (تغيير)</h3>
+                <p>CreateProductCommand<br>UpdateProductCommand<br>RegisterUserCommand<br>UpgradePlanCommand</p>
+                <p style="margin-top:15px;"><strong>Handler:</strong> يستقبل Command → Validation → Logic → Save → Result</p>
+            </div>
+            <div class="cqrs-box cqrs-query">
+                <h3>🔍 Queries (قراءة)</h3>
+                <p>GetProductByIdQuery<br>GetProductsQuery<br>GetUserByIdQuery<br>GetCurrentPlanQuery</p>
+                <p style="margin-top:15px;"><strong>Handler:</strong> يستقبل Query → يقرأ → يرجع DTO</p>
+            </div>
+        </div>
     </div>
-    <p style="font-size:.9rem;color:var(--muted);line-height:1.8">
-      قلب النظام. لو اتغيرت الـ Database بكرة من SQL Server لـ PostgreSQL، أو الـ API اتغير من REST لـ gRPC، الـ Domain يفضل كما هو — مش بيتأثر بأي تغيير خارجي.
-    </p>
-  </div>
 
-  <div class="term-list">
-    <div class="term-row">
-      <span class="term-label green">Common/</span>
-      <div class="term-desc">
-        <strong>BaseEntity.cs</strong> — كل الـ Entities ترث منه. بيحتوي على <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">Id (Guid)</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">CreatedAt</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">CreatedBy</code>.<br>
-        <strong>BaseAuditableEntity.cs</strong> — يضيف <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">UpdatedAt</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">UpdatedBy</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">IsDeleted</code> للـ Soft Delete.<br>
-        <strong>ITenantEntity.cs</strong> — عقد <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">TenantId</code> للـ Shared Schema Mode، الـ Repository يستخدمه للـ Auto-Filtering.<br>
-        <strong>ValueObject.cs</strong> — Base للـ DDD Value Objects (زي Address, Money).
-      </div>
+    <!-- Data Flow -->
+    <div class="section">
+        <div class="section-title"><span>🔄</span><span>Data Flow</span></div>
+        <div class="flow-container">
+            <div class="flow-box presentation">Controller</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box application">MediatR</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box application">Command/Query Handler</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box infrastructure">Repository</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box domain">Entity</div>
+        </div>
     </div>
-    <div class="term-row">
-      <span class="term-label green">Entities/</span>
-      <div class="term-desc">
-        <strong>Tenant.cs</strong> — Entity الأساسي للـ Tenant: Identifier, SchemaName, ConnectionString, SubscriptionPlan, Status.<br>
-        <strong>User.cs</strong> — المستخدمين: Email, PasswordHash, IsActive, Roles[], TenantId.<br>
-        <strong>Role.cs</strong> — Roles: SuperAdmin, TenantAdmin, Member.<br>
-        <strong>Product.cs</strong> — Example Entity. كل Entity بيرث من BaseAuditableEntity.
-      </div>
-    </div>
-    <div class="term-row">
-      <span class="term-label green">Enums/</span>
-      <div class="term-desc">
-        <strong>TenantStatus.cs</strong> — Active, Suspended, Trial, Expired.<br>
-        <strong>SubscriptionPlan.cs</strong> — Free, Pro, Enterprise.<br>
-        <strong>UserRole.cs</strong> — SuperAdmin, TenantAdmin, Member.
-      </div>
-    </div>
-    <div class="term-row">
-      <span class="term-label green">Exceptions/</span>
-      <div class="term-desc">
-        <strong>DomainException.cs</strong> — Base Exception لكل Domain Errors. الـ Middleware في Presentation يمسكها ويحولها 400.<br>
-        <strong>NotFoundException.cs</strong> — لما الـ Entity مش موجود → 404.
-      </div>
-    </div>
-  </div>
-</section>
 
-<!-- ════════════════ 4. Application ════════════════ -->
-<section class="section fade-in" id="application">
-  <h2 class="section-title"><span class="num">٤</span> Core.Application — Mini-Services &amp; Business Logic</h2>
+    <!-- Full Folder Structure -->
+    <div class="section">
+        <div class="section-title"><span>📁</span><span>Full Solution Structure — Acme.SaaS.slnx</span></div>
+        <div class="info-box">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text">
+                <strong>كل Layer في Project منفصل</strong> (Class Library) — Domain, Application, Infrastructure, API. Tests لكل Layer.
+            </div>
+        </div>
+        <div class="tree">
+            <ul>
+                <li>
+                    <span class="folder collapsed"><span class="toggle"></span><strong>Acme.SaaS.slnx</strong></span>
+                    <span class="folder-description"><span class="description-icon">📂</span> Solution file (format .slnx الجديد) — بيجمع 4 Projects أساسية + 4 Test Projects.</span>
+                    <ul class="children">
+                        <li>
+                            <span class="folder collapsed"><span class="toggle"></span><strong>src</strong></span>
+                            <span class="folder-description"><span class="description-icon">💻</span> Source Code — 4 Projects.</span>
+                            <ul class="children">
+                                <!-- Domain -->
+                                <li>
+                                    <span class="folder collapsed"><span class="toggle"></span><strong>Acme.SaaS.Domain</strong></span>
+                                    <span class="folder-description"><span class="description-icon">❤️</span> نواة النظام — ملهاش Dependency على أي External Package. بتعرف الـ Entities, Value Objects, Events, Enums, و Exceptions.</span>
+                                    <ul class="children">
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Common</span>
+                                            <span class="folder-description"><span class="description-icon">🧩</span> Shared Kernel — BaseEntity, BaseAuditableEntity, ValueObject, ITenantEntity.</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">BaseEntity.cs</span><span class="file-description">Id (Guid), CreatedAt, CreatedBy.</span></li>
+                                                <li><span class="file cs">BaseAuditableEntity.cs</span><span class="file-description">+ UpdatedAt, UpdatedBy, IsDeleted (Soft Delete).</span></li>
+                                                <li><span class="file cs">ValueObject.cs</span><span class="file-description">Base Class لـ DDD Value Objects — Equality بالـ Structural Components.</span></li>
+                                                <li><span class="file cs">ITenantEntity.cs</span><span class="file-description">Interface للـ Entities اللي scope لـ Tenant معين.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Entities</span>
+                                            <span class="folder-description"><span class="description-icon">🗂️</span> Core Business Entities.</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">Tenant.cs</span><span class="file-description">Identifier, SchemaName, ConnectionString, Plan, Status.</span></li>
+                                                <li><span class="file cs">User.cs</span><span class="file-description">Email, PasswordHash, IsActive, Role, TenantId.</span></li>
+                                                <li><span class="file cs">Role.cs</span><span class="file-description">Name, Permissions.</span></li>
+                                                <li><span class="file cs">Product.cs</span><span class="file-description">Name, Description, Price, TenantId.</span></li>
+                                                <li><span class="file cs">Order.cs</span><span class="file-description">UserId, TotalAmount, Status (Pending/Processing/Shipped/Delivered/Cancelled), OrderDate.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>ValueObjects</span>
+                                            <span class="folder-description"><span class="description-icon">💎</span> Value Objects — Immutable Objects بتتعرف بـ Properties مش Id.</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">Money.cs</span><span class="file-description">Amount + Currency. Methods: Add, Subtract. يرفض Currency مختلفة.</span></li>
+                                                <li><span class="file cs">Address.cs</span><span class="file-description">Street, City, Country, PostalCode. Validation في الـ Constructor.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Enums</span>
+                                            <span class="folder-description"><span class="description-icon"></span> الـ Enums بتاعت الـ Domain.</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">TenantStatus.cs</span><span class="file-description">Trial, Active, Suspended, Expired.</span></li>
+                                                <li><span class="file cs">SubscriptionPlan.cs</span><span class="file-description">Free, Pro, Enterprise.</span></li>
+                                                <li><span class="file cs">UserRole.cs</span><span class="file-description">SuperAdmin, TenantAdmin, Member.</span></li>
+                                                <li><span class="file cs">OrderStatus.cs</span><span class="file-description">Pending, Processing, Shipped, Delivered, Cancelled.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Events</span>
+                                            <span class="folder-description"><span class="description-icon">📨</span> Domain Events — Events بتحصل في الـ Domain.</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">OrderCreatedEvent.cs</span><span class="file-description">OrderId, UserId, TotalAmount, OccurredAt.</span></li>
+                                                <li><span class="file cs">UserRegisteredEvent.cs</span><span class="file-description">UserId, Email, OccurredAt.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Exceptions</span>
+                                            <span class="folder-description"><span class="description-icon">⚠️</span> Custom Domain Exceptions.</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">DomainException.cs</span><span class="file-description">Base Exception — بتترجم لـ 400.</span></li>
+                                                <li><span class="file cs">NotFoundException.cs</span><span class="file-description">Entity مش موجود — بتترجم لـ 404.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Interfaces</span>
+                                            <span class="folder-description"><span class="description-icon">🔌</span> العقود اللي Infrastructure هتنفذها.</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">IRepository.cs</span><span class="file-description">Generic Repository Interface: GetById, GetAll, Find, Any, Add, Update, Delete, SaveChanges.</span></li>
+                                                <li><span class="file cs">IUnitOfWork.cs</span><span class="file-description">Transaction Management: SaveChanges, Begin/Commit/Rollback.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li><span class="file csproj">Acme.SaaS.Domain.csproj</span><span class="file-description">Zero External Dependencies — Pure .NET.</span></li>
+                                    </ul>
+                                </li>
 
-  <div class="card card-accent-purple">
-    <div class="method-header">
-      <div class="method-icon purple">🎯</div>
-      <div class="method-meta">
-        <h3 style="color:var(--purple)">Core.Application</h3>
-        <span>فيه كل Business Logic. بيعتمد على Domain بس — مش عارف مين البيستخدمه ولا الداتا بتتخزن فين</span>
-      </div>
+                                <!-- Application -->
+                                <li>
+                                    <span class="folder collapsed"><span class="toggle"></span><strong>Acme.SaaS.Application</strong></span>
+                                    <span class="folder-description"><span class="description-icon">⚙️</span> Business Logic — CQRS Pattern بـ MediatR. بيعتمد على Domain بس.</span>
+                                    <ul class="children">
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Common</span>
+                                            <span class="folder-description"><span class="description-icon">🔗</span> مشتركات الـ Application Layer.</span>
+                                            <ul class="children">
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Interfaces</span>
+                                                    <span class="folder-description"><span class="description-icon">🔌</span> Interfaces اللي Infrastructure هتنفذها.</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">IApplicationDbContext.cs</span><span class="file-description">EF Core DbContext abstraction: DbSets + SaveChanges.</span></li>
+                                                        <li><span class="file cs">ITenantProvider.cs</span><span class="file-description">يجيب الـ Tenant الحالي: Id, Schema, Plan.</span></li>
+                                                        <li><span class="file cs">ICurrentUserService.cs</span><span class="file-description">يجيب الـ User الحالي: Id, Email, Role.</span></li>
+                                                        <li><span class="file cs">IPasswordHasher.cs</span><span class="file-description">BCrypt Password Hashing abstraction.</span></li>
+                                                        <li><span class="file cs">IEmailService.cs</span><span class="file-description">Email Sending abstraction: Send, Welcome, PasswordReset.</span></li>
+                                                        <li><span class="file cs">IDateTime.cs</span><span class="file-description">DateTime abstraction للـ Testing.</span></li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Models</span>
+                                                    <span class="folder-description"><span class="description-icon">📦</span> Shared Models.</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">Result.cs</span><span class="file-description">Result Pattern: Success, Failure مع Message و Errors.</span></li>
+                                                        <li><span class="file cs">PaginatedList.cs</span><span class="file-description">Pagination: Items, TotalCount, Page, Size, TotalPages.</span></li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Mappings</span>
+                                                    <span class="folder-description"><span class="description-icon">🔄</span> AutoMapper Profiles.</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">MappingProfile.cs</span><span class="file-description">Entity ↔ DTO mappings.</span></li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Behaviours</span>
+                                                    <span class="folder-description"><span class="description-icon">🛡️</span> MediatR Pipeline Behaviours.</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">LoggingBehaviour.cs</span><span class="file-description">يسجل كل Request (Before/After).</span></li>
+                                                        <li><span class="file cs">ValidationBehaviour.cs</span><span class="file-description">يشغل FluentValidation تلقائياً قبل الـ Handler.</span></li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Exceptions</span>
+                                                    <span class="folder-description"><span class="description-icon">⚠️</span> Application Exceptions.</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">ValidationException.cs</span><span class="file-description">Validation Errors → 400.</span></li>
+                                                        <li><span class="file cs">ForbiddenException.cs</span><span class="file-description">Permission Denied → 403.</span></li>
+                                                    </ul>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Features</span>
+                                            <span class="folder-description"><span class="description-icon">📂</span> كل Feature في فولدر — CQRS Pattern.</span>
+                                            <ul class="children">
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Products</span>
+                                                    <span class="folder-description"><span class="description-icon">📦</span> Feature المنتجات.</span>
+                                                    <ul class="children">
+                                                        <li>
+                                                            <span class="folder collapsed"><span class="toggle"></span>Commands</span>
+                                                            <ul class="children">
+                                                                <li>
+                                                                    <span class="folder collapsed"><span class="toggle"></span>CreateProduct</span>
+                                                                    <ul class="children">
+                                                                        <li><span class="file cs">CreateProductCommand.cs</span><span class="file-description">Command: Name, Description, Price.</span></li>
+                                                                        <li><span class="file cs">CreateProductCommandHandler.cs</span><span class="file-description">Handler: ينشئ Product ويحفظه.</span></li>
+                                                                        <li><span class="file cs">CreateProductCommandValidator.cs</span><span class="file-description">Validator: Name مش فاضي, Price > 0.</span></li>
+                                                                    </ul>
+                                                                </li>
+                                                                <li>
+                                                                    <span class="folder collapsed"><span class="toggle"></span>UpdateProduct</span>
+                                                                    <ul class="children">
+                                                                        <li><span class="file cs">UpdateProductCommand.cs</span><span class="file-description">Command: Id + بيانات جديدة.</span></li>
+                                                                        <li><span class="file cs">UpdateProductCommandHandler.cs</span><span class="file-description">Handler: يلاقي → يحدث → يحفظ.</span></li>
+                                                                        <li><span class="file cs">UpdateProductCommandValidator.cs</span><span class="file-description">Validator: Id موجود, بيانات صحيحة.</span></li>
+                                                                    </ul>
+                                                                </li>
+                                                            </ul>
+                                                        </li>
+                                                        <li>
+                                                            <span class="folder collapsed"><span class="toggle"></span>Queries</span>
+                                                            <ul class="children">
+                                                                <li>
+                                                                    <span class="folder collapsed"><span class="toggle"></span>GetProductById</span>
+                                                                    <ul class="children">
+                                                                        <li><span class="file cs">GetProductByIdQuery.cs</span><span class="file-description">Query: Id.</span></li>
+                                                                        <li><span class="file cs">GetProductByIdQueryHandler.cs</span><span class="file-description">Handler: يجيب Product ويحوله لـ DTO.</span></li>
+                                                                    </ul>
+                                                                </li>
+                                                                <li>
+                                                                    <span class="folder collapsed"><span class="toggle"></span>GetProducts</span>
+                                                                    <ul class="children">
+                                                                        <li><span class="file cs">GetProductsQuery.cs</span><span class="file-description">Query: Pagination + Search.</span></li>
+                                                                        <li><span class="file cs">GetProductsQueryHandler.cs</span><span class="file-description">Handler: يجيب Products مع Pagination.</span></li>
+                                                                    </ul>
+                                                                </li>
+                                                            </ul>
+                                                        </li>
+                                                        <li>
+                                                            <span class="folder collapsed"><span class="toggle"></span>DTOs</span>
+                                                            <ul class="children">
+                                                                <li><span class="file cs">ProductDto.cs</span><span class="file-description">Id, Name, Description, Price.</span></li>
+                                                                <li><span class="file cs">CreateProductDto.cs</span><span class="file-description">Name, Description, Price.</span></li>
+                                                            </ul>
+                                                        </li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Users</span>
+                                                    <span class="folder-description"><span class="description-icon">👥</span> Feature المستخدمين.</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">RegisterUserCommand.cs</span><span class="file-description">Command: Email, Password, Name, TenantId.</span></li>
+                                                        <li><span class="file cs">RegisterUserCommandHandler.cs</span><span class="file-description">Handler: يعمل Hash للـ Password ويحفظ الـ User.</span></li>
+                                                        <li><span class="file cs">LoginUserCommand.cs</span><span class="file-description">Command: Email, Password.</span></li>
+                                                        <li><span class="file cs">GetUserByIdQuery.cs</span><span class="file-description">Query: Id → UserDto.</span></li>
+                                                        <li><span class="file cs">GetUserByIdQueryHandler.cs</span><span class="file-description">Handler: يجيب User ويحوله لـ DTO.</span></li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Tenants</span>
+                                                    <span class="folder-description"><span class="description-icon">🏢</span> Feature إدارة الـ Tenants.</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">CreateTenantCommand.cs</span><span class="file-description">Command: Identifier, SchemaName, Plan.</span></li>
+                                                        <li><span class="file cs">CreateTenantCommandHandler.cs</span><span class="file-description">Handler: ينشئ Tenant جديد.</span></li>
+                                                        <li><span class="file cs">GetTenantByIdQuery.cs</span><span class="file-description">Query: Id → TenantDto.</span></li>
+                                                        <li><span class="file cs">GetTenantByIdQueryHandler.cs</span><span class="file-description">Handler: يجيب Tenant ويحوله لـ DTO.</span></li>
+                                                        <li><span class="file cs">GetTenantsQuery.cs</span><span class="file-description">Query: Pagination → List.</span></li>
+                                                        <li><span class="file cs">GetTenantsQueryHandler.cs</span><span class="file-description">Handler: يجيب كل الـ Tenants مع Pagination.</span></li>
+                                                        <li><span class="file cs">DeactivateTenantCommand.cs</span><span class="file-description">Command: Id.</span></li>
+                                                        <li><span class="file cs">DeactivateTenantCommandHandler.cs</span><span class="file-description">Handler: يعطل الـ Tenant.</span></li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Billing</span>
+                                                    <span class="folder-description"><span class="description-icon">💳</span> Feature الاشتراكات والفواتير.</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">GetCurrentPlanQuery.cs</span><span class="file-description">Query: TenantId → PlanDto.</span></li>
+                                                        <li><span class="file cs">GetCurrentPlanQueryHandler.cs</span><span class="file-description">Handler: يجيب الـ Plan الحالي.</span></li>
+                                                        <li><span class="file cs">UpgradePlanCommand.cs</span><span class="file-description">Command: TenantId, NewPlan.</span></li>
+                                                        <li><span class="file cs">UpgradePlanCommandHandler.cs</span><span class="file-description">Handler: يحدث الـ Plan.</span></li>
+                                                    </ul>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li><span class="file cs">DependencyInjection.cs</span><span class="file-description">DI Registration: MediatR, AutoMapper, FluentValidation, Behaviours.</span></li>
+                                        <li><span class="file csproj">Acme.SaaS.Application.csproj</span><span class="file-description">يعتمد على Domain + Packages: MediatR, AutoMapper, FluentValidation.</span></li>
+                                    </ul>
+                                </li>
+
+                                <!-- Infrastructure -->
+                                <li>
+                                    <span class="folder collapsed"><span class="toggle"></span><strong>Acme.SaaS.Infrastructure</strong></span>
+                                    <span class="folder-description"><span class="description-icon">🔧</span> Implementations: Data Access, Multi-Tenancy, External Services, Identity.</span>
+                                    <ul class="children">
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>MultiTenancy</span>
+                                            <span class="folder-description"><span class="description-icon">🏢</span> Multi-Tenancy Core.</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">TenancyOptions.cs</span><span class="file-description">SeparateSchema / SharedSchema Mode.</span></li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Services</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">TenantProvider.cs</span><span class="file-description">يقرى الـ Tenant من HttpContext.Items.</span></li>
+                                                        <li><span class="file cs">SchemaService.cs</span><span class="file-description">ينشئ Schema لكل Tenant.</span></li>
+                                                        <li><span class="file cs">TenantConnectionService.cs</span><span class="file-description">لـ DB-per-tenant scenarios.</span></li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Store</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">TenantStore.cs</span><span class="file-description">Cache للـ Tenants (In-Memory → Redis).</span></li>
+                                                    </ul>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Persistence</span>
+                                            <span class="folder-description"><span class="description-icon">💾</span> EF Core Data Access.</span>
+                                            <ul class="children">
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Contexts</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">ApplicationDbContext.cs</span><span class="file-description">Business Data Context مع Interceptors.</span></li>
+                                                        <li><span class="file cs">MasterDbContext.cs</span><span class="file-description">Master DB: جدول Tenants بس.</span></li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Configurations</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">TenantConfiguration.cs</span><span class="file-description">EF Config للـ Tenant Entity.</span></li>
+                                                        <li><span class="file cs">UserConfiguration.cs</span><span class="file-description">EF Config للـ User Entity.</span></li>
+                                                        <li><span class="file cs">ProductConfiguration.cs</span><span class="file-description">EF Config للـ Product Entity.</span></li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Repositories</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">GenericRepository.cs</span><span class="file-description">Generic CRUD + Mode-aware Tenant Filtering.</span></li>
+                                                        <li><span class="file cs">UnitOfWork.cs</span><span class="file-description">Transaction Management.</span></li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Interceptors</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">AuditableEntityInterceptor.cs</span><span class="file-description">Auto-sets CreatedAt/UpdatedAt.</span></li>
+                                                        <li><span class="file cs">SoftDeleteInterceptor.cs</span><span class="file-description">DELETE → IsDeleted=true.</span></li>
+                                                        <li><span class="file cs">TenantInterceptor.cs</span><span class="file-description">Auto-sets TenantId, يمنع cross-tenant.</span></li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Migrations</span>
+                                                    <ul class="children">
+                                                        <li><span class="folder collapsed"><span class="toggle"></span>Master</span><ul class="children"><li><span class="file config">.gitkeep</span></li></ul></li>
+                                                        <li><span class="folder collapsed"><span class="toggle"></span>Tenant</span><ul class="children"><li><span class="file config">.gitkeep</span></li></ul></li>
+                                                    </ul>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Services</span>
+                                            <span class="folder-description"><span class="description-icon">🔌</span> External Services Implementations.</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">EmailService.cs</span><span class="file-description">SMTP/SendGrid Email Sending.</span></li>
+                                                <li><span class="file cs">FileStorageService.cs</span><span class="file-description">AWS S3/Azure Blob File Storage.</span></li>
+                                                <li><span class="file cs">PaymentGatewayService.cs</span><span class="file-description">Stripe/PayPal Payment Processing.</span></li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>Identity</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">JwtTokenService.cs</span><span class="file-description">JWT Token Generation.</span></li>
+                                                        <li><span class="file cs">CurrentUserService.cs</span><span class="file-description">يقرا User من JWT Claims.</span></li>
+                                                        <li><span class="file cs">PasswordHasher.cs</span><span class="file-description">BCrypt Hashing.</span></li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>FeatureGating</span>
+                                                    <ul class="children">
+                                                        <li><span class="file cs">FeatureGatingService.cs</span><span class="file-description">Plan-based Feature Access Control.</span></li>
+                                                    </ul>
+                                                </li>
+                                                <li>
+                                                    <span class="folder collapsed"><span class="toggle"></span>CustomLogic</span>
+                                                    <ul class="children">
+                                                        <li><span class="folder collapsed"><span class="toggle"></span>Strategies</span><ul class="children"><li><span class="file cs">StandardTaxStrategy.cs</span><span class="file-description">10% Tax.</span></li><li><span class="file cs">VodafoneTaxStrategy.cs</span><span class="file-description">14% + 5 Tax.</span></li></ul></li>
+                                                        <li><span class="folder collapsed"><span class="toggle"></span>Factories</span><ul class="children"><li><span class="file cs">TaxStrategyFactory.cs</span><span class="file-description">يختار الـ Strategy حسب الـ Tenant.</span></li></ul></li>
+                                                    </ul>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Identity</span>
+                                            <span class="folder-description"><span class="description-icon"></span> ASP.NET Core Identity Models.</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">ApplicationUser.cs</span><span class="file-description">User Entity للـ Identity.</span></li>
+                                                <li><span class="file cs">ApplicationRole.cs</span><span class="file-description">Role Entity للـ Identity.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li><span class="file csproj">Acme.SaaS.Infrastructure.csproj</span><span class="file-description">يعتمد على Application + EF Core, BCrypt, JWT.</span></li>
+                                    </ul>
+                                </li>
+
+                                <!-- API -->
+                                <li>
+                                    <span class="folder collapsed"><span class="toggle"></span><strong>Acme.SaaS.API</strong></span>
+                                    <span class="folder-description"><span class="description-icon">🖥️</span> Presentation Layer — HTTP Entry Point.</span>
+                                    <ul class="children">
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Controllers</span>
+                                            <span class="folder-description"><span class="description-icon">🎯</span> API Controllers — Thin, بيستخدموا MediatR بس.</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">BaseApiController.cs</span><span class="file-description">Base Controller: ApiController, Route, Helper.</span></li>
+                                                <li><span class="file cs">ProductsController.cs</span><span class="file-description">CRUD Products Endpoints.</span></li>
+                                                <li><span class="file cs">UsersController.cs</span><span class="file-description">Users Endpoints.</span></li>
+                                                <li><span class="file cs">AuthController.cs</span><span class="file-description">Login, Register, RefreshToken.</span></li>
+                                                <li><span class="file cs">TenantsController.cs</span><span class="file-description">Tenant Management.</span></li>
+                                                <li><span class="file cs">BillingController.cs</span><span class="file-description">Subscription, Plan Upgrade.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Middlewares</span>
+                                            <span class="folder-description"><span class="description-icon">🛡️</span> Custom Middlewares.</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">ExceptionHandlingMiddleware.cs</span><span class="file-description">Global Exception → JSON.</span></li>
+                                                <li><span class="file cs">RequestLoggingMiddleware.cs</span><span class="file-description">Method, Path, Status, Duration.</span></li>
+                                                <li><span class="file cs">TenantResolutionMiddleware.cs</span><span class="file-description">Subdomain/Header/JWT Tenant Resolution.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Filters</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">SwaggerDefaultValues.cs</span><span class="file-description">يضيف X-Tenant-Id لـ Swagger UI.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Models</span>
+                                            <span class="folder-description"><span class="description-icon">📋</span> API Response Models.</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">ApiResponse.cs</span><span class="file-description">Standard Response: Success, Data, Message, Errors.</span></li>
+                                                <li><span class="file cs">PaginatedResponse.cs</span><span class="file-description">Pagination Response: Items, PageNumber, PageSize, TotalCount.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Resources</span>
+                                            <span class="folder-description"><span class="description-icon">🌐</span> Localization Resources.</span>
+                                            <ul class="children">
+                                                <li><span class="file json">SharedResources.ar-EG.resx</span><span class="file-description">Arabic Resources.</span></li>
+                                                <li><span class="file json">SharedResources.en-US.resx</span><span class="file-description">English Resources.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <span class="folder collapsed"><span class="toggle"></span>Extensions</span>
+                                            <ul class="children">
+                                                <li><span class="file cs">ServiceCollectionExtensions.cs</span><span class="file-description">API Service Registration.</span></li>
+                                                <li><span class="file cs">ApplicationBuilderExtensions.cs</span><span class="file-description">Middleware Pipeline Order.</span></li>
+                                            </ul>
+                                        </li>
+                                        <li><span class="file cs">Program.cs</span><span class="file-description">Entry Point.</span></li>
+                                        <li><span class="file config">appsettings.json</span><span class="file-description">Configuration: ConnectionStrings, JWT, Tenancy.</span></li>
+                                        <li><span class="file config">appsettings.Development.json</span><span class="file-description">Development Configuration.</span></li>
+                                        <li><span class="file csproj">Acme.SaaS.API.csproj</span><span class="file-description">Web API Project.</span></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+
+                        <!-- Tests -->
+                        <li>
+                            <span class="folder collapsed"><span class="toggle"></span><strong>tests</strong></span>
+                            <ul class="children">
+                                <li><span class="folder collapsed"><span class="toggle"></span>Acme.SaaS.Domain.Tests</span><span class="folder-description">Pure Unit Tests للـ Domain.</span><ul class="children"><li><span class="file cs">UnitTest1.cs</span></li><li><span class="file csproj">Acme.SaaS.Domain.Tests.csproj</span></li></ul></li>
+                                <li><span class="folder collapsed"><span class="toggle"></span>Acme.SaaS.Application.Tests</span><span class="folder-description">Use Case Tests مع Mocks.</span><ul class="children"><li><span class="file cs">UnitTest1.cs</span></li><li><span class="file csproj">Acme.SaaS.Application.Tests.csproj</span></li></ul></li>
+                                <li><span class="folder collapsed"><span class="toggle"></span>Acme.SaaS.Infrastructure.Tests</span><span class="folder-description">Integration Tests.</span><ul class="children"><li><span class="file cs">UnitTest1.cs</span></li><li><span class="file csproj">Acme.SaaS.Infrastructure.Tests.csproj</span></li></ul></li>
+                                <li><span class="folder collapsed"><span class="toggle"></span>Acme.SaaS.API.Tests</span><span class="folder-description">E2E API Tests.</span><ul class="children"><li><span class="file cs">UnitTest1.cs</span></li><li><span class="file csproj">Acme.SaaS.API.Tests.csproj</span></li></ul></li>
+                            </ul>
+                        </li>
+
+                        <!-- Root Files -->
+                        <li><span class="file sln">Acme.SaaS.slnx</span><span class="file-description">Solution File (format .slnx الجديد).</span></li>
+                        <li><span class="file config">Directory.Build.props</span><span class="file-description">Common Build Properties.</span></li>
+                        <li><span class="file config">Dockerfile</span><span class="file-description">Docker Image Build.</span></li>
+                        <li><span class="file config">docker-compose.yml</span><span class="file-description">Docker Compose للـ API + SQL Server.</span></li>
+                        <li><span class="file">.gitignore</span><span class="file-description">ملفات مش هتترفع على Git.</span></li>
+                        <li><span class="file md">README.md</span><span class="file-description">توثيق المشروع.</span></li>
+                        <li><span class="file md">folder-directory-map.md</span><span class="file-description">خريطة كل ملف ومسئوليته.</span></li>
+                        <li><span class="file md">migration-changelog.md</span><span class="file-description">قرارات معماریة وتغييرات.</span></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
     </div>
-  </div>
 
-  <div class="dual-grid">
-    <div class="dual-card" style="border-top:2px solid var(--purple)">
-      <h3 style="color:var(--purple)">📂 Common/Interfaces/</h3>
-      <p>
-        العقود اللي Infrastructure هينفّذها:<br><br>
-        <strong>IApplicationDbContext</strong> — عقد الـ DbContext.<br>
-        <strong>ITenantProvider</strong> — يجيب الـ Tenant الحالي (Id, Schema, Plan).<br>
-        <strong>ICurrentUserService</strong> — يجيب الـ User المسجل (Id, Roles).<br>
-        <strong>IUnitOfWork</strong> — للـ Transactions.<br>
-        <strong>IGenericRepository</strong> — CRUD أساسي.<br>
-        <strong>IPasswordHasher</strong> — تجريد لـ BCrypt.
-      </p>
-    </div>
-    <div class="dual-card" style="border-top:2px solid var(--blue)">
-      <h3 style="color:var(--blue)">📂 MiniServices/</h3>
-      <p>
-        كل Feature في فولدر لوحدها — Interface + Implementation:<br><br>
-        <strong>Tenants/</strong> — إنشاء وتحديث وتفعيل Tenants.<br>
-        <strong>Identity/</strong> — Login, Register, Refresh Token.<br>
-        <strong>Billing/</strong> — اشتراكات, خطط, فواتير.<br>
-        <strong>Products/</strong> — CRUD مثال.<br>
-        <strong>[FeatureName]/</strong> — كل Feature ليه Service.
-      </p>
-    </div>
-  </div>
-
-  <div class="info-box blue">
-    <span class="ib-icon">⚡</span>
-    <p><strong>ليه Mini-Services مش CQRS؟</strong> — عشان مش محتاج Over-engineering دلوقتي. الـ Mini-Service بتفصل الـ Business Logic بتاع كل Feature من غير Commands و Queries. لو Feature كبرت، أقدر بعدين أحولها لـ CQRS أو Module مستقل من غير ما نكسر حاجة.</p>
-  </div>
-
-  <div class="code-block">
-    <pre><span class="cm">// مثال — Mini-Service: Interface + Implementation</span>
-
-<span class="cm">// ITenantService.cs</span>
-<span class="kw">public interface</span> <span class="cl">ITenantService</span>
+    <!-- Best Practices -->
+    <div class="section">
+        <div class="section-title"><span>💡</span><span>Best Practices (اضغط للتفاصيل)</span></div>
+        <div class="practices">
+            <ul>
+                <li data-target="layer-domain" data-highlight="domain">
+                    <div>
+                        <span class="practice-tag tag-domain">Domain</span>
+                        <strong>Domain مش بيعتمد على أي حاجة</strong><br>
+                        <small>مفيش Dependencies على Frameworks خارجية</small>
+                        <div class="practice-example">
+<span class="code-comment">// ✅ Domain Entity نقي — مفيش EF Attributes</span>
+<span class="code-keyword">public class</span> <span class="code-type">Product</span> : <span class="code-type">BaseAuditableEntity</span>
 {
-    Task&lt;ApiResponse&lt;Guid&gt;&gt; CreateTenantAsync(CreateTenantRequest request, CancellationToken ct);
-    Task&lt;ApiResponse&lt;TenantDto&gt;&gt; GetTenantByIdAsync(Guid tenantId, CancellationToken ct);
-    Task&lt;ApiResponse&lt;PagedResult&lt;TenantDto&gt;&gt;&gt; GetTenantsListAsync(PaginationFilter filter, CancellationToken ct);
-    Task DeactivateTenantAsync(Guid tenantId, CancellationToken ct);
+    <span class="code-keyword">public string</span> Name { <span class="code-keyword">get</span>; <span class="code-keyword">set</span>; }
+    <span class="code-keyword">public decimal</span> Price { <span class="code-keyword">get</span>; <span class="code-keyword">set</span>; }
+
+    <span class="code-keyword">public void</span> <span class="code-method">UpdatePrice</span>(<span class="code-keyword">decimal</span> newPrice)
+    {
+        <span class="code-keyword">if</span> (newPrice <= 0)
+            <span class="code-keyword">throw new</span> <span class="code-type">DomainException</span>(<span class="code-string">"Price must be &gt; zero"</span>);
+        Price = newPrice;
+    }
+}
+                        </div>
+                    </div>
+                </li>
+                <li data-target="layer-application" data-highlight="application">
+                    <div>
+                        <span class="practice-tag tag-application">CQRS</span>
+                        <strong>افصل الـ Commands عن الـ Queries</strong><br>
+                        <small>كل Command/Query ليه Handler منفصل + Validator</small>
+                        <div class="practice-example">
+<span class="code-comment">// ✅ Command</span>
+<span class="code-keyword">public record</span> <span class="code-type">CreateProductCommand</span>(
+    <span class="code-type">string</span> Name, <span class="code-type">decimal</span> Price
+) : <span class="code-type">IRequest</span>&lt;<span class="code-type">Result</span>&lt;<span class="code-type">Guid</span>&gt;&gt;;
+
+<span class="code-comment">// ✅ Handler</span>
+<span class="code-keyword">public class</span> <span class="code-type">CreateProductCommandHandler</span>
+    : <span class="code-type">IRequestHandler</span>&lt;<span class="code-type">CreateProductCommand</span>, <span class="code-type">Result</span>&lt;<span class="code-type">Guid</span>&gt;&gt;
+{
+    <span class="code-keyword">public async</span> <span class="code-type">Task</span>&lt;<span class="code-type">Result</span>&lt;<span class="code-type">Guid</span>&gt;&gt; <span class="code-method">Handle</span>(
+        <span class="code-type">CreateProductCommand</span> request, <span class="code-type">CancellationToken</span> ct)
+    {
+        <span class="code-keyword">var</span> product = <span class="code-keyword">new</span> <span class="code-type">Product</span> { Name = request.Name, Price = request.Price };
+        _repository.Add(product);
+        <span class="code-keyword">await</span> _repository.SaveChangesAsync(ct);
+        <span class="code-keyword">return</span> <span class="code-type">Result</span>&lt;<span class="code-type">Guid</span>&gt;.Success(product.Id);
+    }
 }
 
-<span class="cm">// TenantService.cs</span>
-<span class="kw">public class</span> <span class="cl">TenantService</span> : <span class="cl">ITenantService</span>
+<span class="code-comment">// ✅ Validator</span>
+<span class="code-keyword">public class</span> <span class="code-type">CreateProductCommandValidator</span>
+    : <span class="code-type">AbstractValidator</span>&lt;<span class="code-type">CreateProductCommand</span>&gt;
 {
-    <span class="kw">private readonly</span> <span class="cl">IApplicationDbContext</span> _context;
-    <span class="kw">private readonly</span> <span class="cl">IUnitOfWork</span> _unitOfWork;
-    <span class="kw">private readonly</span> <span class="cl">IMapper</span> _mapper;
-
-    <span class="kw">public async</span> Task&lt;ApiResponse&lt;Guid&gt;&gt; CreateTenantAsync(...)
+    <span class="code-keyword">public</span> <span class="code-method">CreateProductCommandValidator</span>()
     {
-        <span class="cm">// ✅ Business Logic هنا — نضيفة ومحددة</span>
+        RuleFor(x => x.Name).NotEmpty();
+        RuleFor(x => x.Price).GreaterThan(0);
     }
-}</pre>
-  </div>
+}
+                        </div>
+                    </div>
+                </li>
+                <li data-target="layer-application" data-highlight="application">
+                    <div>
+                        <span class="practice-tag tag-application">MediatR</span>
+                        <strong>استخدم MediatR Pipeline Behaviours</strong><br>
+                        <small>Validation و Logging قبل ما الـ Handler يشتغل</small>
+                        <div class="practice-example">
+<span class="code-comment">// ValidationBehaviour بيشتغل تلقائيًا لكل Request</span>
+<span class="code-keyword">public class</span> <span class="code-type">ValidationBehaviour</span>&lt;TRequest, TResponse&gt;
+    : <span class="code-type">IPipelineBehavior</span>&lt;TRequest, TResponse&gt;
+{
+    <span class="code-keyword">public async</span> <span class="code-type">Task</span>&lt;TResponse&gt; <span class="code-method">Handle</span>(
+        TRequest request, <span class="code-type">RequestHandlerDelegate</span>&lt;TResponse&gt; next, <span class="code-type">CancellationToken</span> ct)
+    {
+        <span class="code-keyword">var</span> failures = <span class="code-keyword">await</span> <span class="code-type">Task</span>.WhenAll(
+            _validators.Select(v => v.ValidateAsync(request, ct)));
+        <span class="code-keyword">if</span> (failures.SelectMany(r => r.Errors).Any())
+            <span class="code-keyword">throw new</span> <span class="code-type">ValidationException</span>(failures);
+        <span class="code-keyword">return await</span> next();
+    }
+}
+                        </div>
+                    </div>
+                </li>
+                <li data-target="layer-infrastructure" data-highlight="infrastructure">
+                    <div>
+                        <span class="practice-tag tag-infrastructure">Repository</span>
+                        <strong>Repository Pattern مع IUnitOfWork</strong><br>
+                        <small>الـ Domain بيعرف الـ Interfaces، الـ Infrastructure بتنفذها</small>
+                        <div class="practice-example">
+<span class="code-comment">// Interface في Domain/Interfaces</span>
+<span class="code-keyword">public interface</span> <span class="code-type">IRepository</span>&lt;T&gt;
+{
+    <span class="code-type">Task</span>&lt;T?&gt; GetByIdAsync(<span class="code-type">Guid</span> id, <span class="code-type">CancellationToken</span> ct = <span class="code-keyword">default</span>);
+    <span class="code-type">Task</span>&lt;<span class="code-type">IReadOnlyList</span>&lt;T&gt;&gt; GetAllAsync(<span class="code-type">CancellationToken</span> ct = <span class="code-keyword">default</span>);
+    <span class="code-keyword">void</span> Add(T entity);
+    <span class="code-keyword">void</span> Update(T entity);
+    <span class="code-keyword">void</span> Delete(T entity);
+    <span class="code-type">Task</span>&lt;<span class="code-keyword">int</span>&gt; SaveChangesAsync(<span class="code-type">CancellationToken</span> ct = <span class="code-keyword">default</span>);
+}
+                        </div>
+                    </div>
+                </li>
+                <li data-target="layer-presentation" data-highlight="presentation">
+                    <div>
+                        <span class="practice-tag tag-presentation">Controller</span>
+                        <strong>Thin Controllers — بيندوا لـ MediatR بس</strong><br>
+                        <small>مفيش Business Logic في الـ Controllers</small>
+                        <div class="practice-example">
+<span class="code-comment">// ✅ Controller نظيف</span>
+[<span class="code-attribute">ApiController</span>]
+[<span class="code-attribute">Route</span>(<span class="code-string">"api/[controller]"</span>)]
+<span class="code-keyword">public class</span> <span class="code-type">ProductsController</span> : <span class="code-type">ControllerBase</span>
+{
+    <span class="code-keyword">private readonly</span> <span class="code-type">IMediator</span> _mediator;
 
-  <div class="term-list">
-    <div class="term-row">
-      <span class="term-label blue">Extensions/</span>
-      <div class="term-desc">
-        <strong>ServiceCollectionExtensions.cs</strong> — DI لكل المشاريع: JWT Auth, Swagger, Controllers, HttpContextAccessor. فيه <strong style="color:var(--yellow)">3 طرق رئيسية</strong>:
-        <div style="margin-top:.4rem;font-size:.85rem">
-          <span style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:5px;padding:.1rem .5rem;font-family:'JetBrains Mono',monospace">AddApiLayer()</span> — تسجيل JWT + Swagger + Controllers + HttpContextAccessor<br>
-          <span style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:5px;padding:.1rem .5rem;font-family:'JetBrains Mono',monospace">AddTenantDbContext()</span> — يقرأ TenancyOptions و ConnectionString من Config، يسجل الـ Infrastructure Layer كامل<br>
-          ‏الـ <span style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:5px;padding:.1rem .5rem;font-family:'JetBrains Mono',monospace">AddApplicationLayer()</span> متعرف في Application/Extensions
+    [<span class="code-attribute">HttpPost</span>]
+    <span class="code-keyword">public async</span> <span class="code-type">Task</span>&lt;<span class="code-type">ActionResult</span>&gt; <span class="code-method">Create</span>(
+        [<span class="code-attribute">FromBody</span>] <span class="code-type">CreateProductCommand</span> command)
+    {
+        <span class="code-keyword">var</span> result = <span class="code-keyword">await</span> _mediator.Send(command);
+        <span class="code-keyword">return</span> Ok(result);
+    }
+}
+                        </div>
+                    </div>
+                </li>
+                <li data-target="layer-presentation" data-highlight="presentation">
+                    <div>
+                        <span class="practice-tag tag-presentation">Errors</span>
+                        <strong>Global Exception Handler Middleware</strong><br>
+                        <small>مفيش try/catch في كل Controller</small>
+                        <div class="practice-example">
+<span class="code-comment">// Global Middleware يمسك كل الـ Exceptions</span>
+<span class="code-keyword">public class</span> <span class="code-type">ExceptionHandlingMiddleware</span>
+{
+    <span class="code-keyword">public async</span> <span class="code-type">Task</span> <span class="code-method">InvokeAsync</span>(<span class="code-type">HttpContext</span> context)
+    {
+        <span class="code-keyword">try</span> { <span class="code-keyword">await</span> _next(context); }
+        <span class="code-keyword">catch</span> (<span class="code-type">NotFoundException</span>) { context.Response.StatusCode = 404; }
+        <span class="code-keyword">catch</span> (<span class="code-type">DomainException</span>)    { context.Response.StatusCode = 400; }
+        <span class="code-keyword">catch</span> (<span class="code-type">Exception</span>)          { context.Response.StatusCode = 500; }
+        <span class="code-keyword">await</span> context.Response.WriteAsJsonAsync(response);
+    }
+}
+                        </div>
+                    </div>
+                </li>
+                <li data-target="layer-domain" data-highlight="domain">
+                    <div>
+                        <span class="practice-tag tag-domain">ValueObject</span>
+                        <strong>استخدم Value Objects للقيم المركبة</strong><br>
+                        <small>زي Money, Address — Immutable و Structural Equality</small>
+                        <div class="practice-example">
+<span class="code-comment">// ✅ Value Object</span>
+<span class="code-keyword">public class</span> <span class="code-type">Money</span> : <span class="code-type">ValueObject</span>
+{
+    <span class="code-keyword">public decimal</span> Amount { <span class="code-keyword">get</span>; }
+    <span class="code-keyword">public string</span> Currency { <span class="code-keyword">get</span>; }
+
+    <span class="code-keyword">public</span> <span class="code-method">Money</span>(<span class="code-keyword">decimal</span> amount, <span class="code-keyword">string</span> currency)
+    {
+        <span class="code-keyword">if</span> (amount &lt; 0) <span class="code-keyword">throw new</span> <span class="code-type">DomainException</span>(...);
+        Amount = amount; Currency = currency;
+    }
+
+    <span class="code-keyword">protected override</span> <span class="code-type">IEnumerable</span>&lt;<span class="code-keyword">object</span>&gt; GetEqualityComponents()
+    {
+        <span class="code-keyword">yield return</span> Amount; <span class="code-keyword">yield return</span> Currency;
+    }
+}
+
+<span class="code-comment">// 100 USD == 100 USD ✅</span>
+<span class="code-comment">// 100 USD != 200 USD ✅</span>
+<span class="code-comment">// 100 USD != 100 EUR ✅</span>
+                        </div>
+                    </div>
+                </li>
+                <li data-target="layer-domain" data-highlight="domain">
+                    <div>
+                        <span class="practice-tag tag-domain">Events</span>
+                        <strong>استخدم Domain Events للـ Side Effects</strong><br>
+                        <small>لما يحصل حاجة مهمة في الـ Domain، اعمل Event</small>
+                        <div class="practice-example">
+<span class="code-comment">// ✅ Domain Event</span>
+<span class="code-keyword">public class</span> <span class="code-type">OrderCreatedEvent</span>
+{
+    <span class="code-keyword">public</span> <span class="code-type">Guid</span> OrderId { <span class="code-keyword">get</span>; }
+    <span class="code-keyword">public</span> <span class="code-type">Guid</span> UserId { <span class="code-keyword">get</span>; }
+    <span class="code-keyword">public</span> <span class="code-type">DateTime</span> OccurredAt { <span class="code-keyword">get</span>; }
+
+    <span class="code-keyword">public</span> <span class="code-method">OrderCreatedEvent</span>(<span class="code-type">Guid</span> orderId, <span class="code-type">Guid</span> userId, <span class="code-keyword">decimal</span> total)
+    {
+        OrderId = orderId; UserId = userId;
+        TotalAmount = total; OccurredAt = DateTime.UtcNow;
+    }
+}
+                        </div>
+                    </div>
+                </li>
+            </ul>
         </div>
-      </div>
     </div>
-    <div class="term-row">
-      <span class="term-label blue">ApplicationBuilderExtensions.cs</span>
-      <div class="term-desc">
-        <strong>UseApiPipeline()</strong> — ترتيب الـ Middleware Pipeline:
-        <div style="margin-top:.4rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--muted);line-height:1.7">
-          1️⃣ ExceptionHandlingMiddleware<br>
-          2️⃣ RequestLoggingMiddleware<br>
-          3️⃣ ⭐ TenantResolutionMiddleware<br>
-          4️⃣ app.UseAuthentication()<br>
-          5️⃣ app.UseAuthorization()<br>
-          6️⃣ app.UseSwagger() + UseSwaggerUI() ← Dev only<br>
-          7️⃣ app.MapControllers()
+
+    <!-- Features -->
+    <div class="section">
+        <div class="section-title"><span>✨</span><span>Feature Modules — CQRS</span></div>
+        <div class="features">
+            <div class="feature-card">
+                <h4>📦 Products</h4>
+                <ul>
+                    <li>CreateProductCommand</li>
+                    <li>UpdateProductCommand</li>
+                    <li>GetProductByIdQuery</li>
+                    <li>GetProductsQuery</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4>👥 Users</h4>
+                <ul>
+                    <li>RegisterUserCommand</li>
+                    <li>LoginUserCommand</li>
+                    <li>GetUserByIdQuery</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4>🏢 Tenants</h4>
+                <ul>
+                    <li>CreateTenantCommand</li>
+                    <li>DeactivateTenantCommand</li>
+                    <li>GetTenantByIdQuery</li>
+                    <li>GetTenantsQuery</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4>💳 Billing</h4>
+                <ul>
+                    <li>GetCurrentPlanQuery</li>
+                    <li>UpgradePlanCommand</li>
+                </ul>
+            </div>
         </div>
-      </div>
     </div>
-    <div class="term-row">
-      <span class="term-label blue">Filters/SwaggerDefaultValues.cs</span>
-      <div class="term-desc">
-        <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">IOperationFilter</code> بيزود <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">X-Tenant-Id</code> Header Parameter في كل Operations في Swagger UI عشان تقدر تختبر الـ Multi-Tenancy من Swagger نفسه من غير ما تحتاج Postman.
-      </div>
-    </div>
-    <div class="term-row">
-      <span class="term-label blue">Program.cs</span>
-      <div class="term-desc">
-        نقطة البداية — 12 سطر بس:
-        <div style="margin-top:.4rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--muted);line-height:1.6;background:var(--code-bg);padding:.5rem .7rem;border-radius:6px">
-var builder = WebApplication.CreateBuilder(args);<br>
-builder.Services.AddApiLayer(builder.Configuration);<br>
-builder.Services.AddApplicationLayer();<br>
-builder.Services.AddTenantDbContext(builder.Configuration);<br>
-var app = builder.Build();<br>
-app.UseApiPipeline();<br>
-app.Run();
+
+    <!-- Pipeline -->
+    <div class="section">
+        <div class="section-title"><span>🔄</span><span>Request Pipeline Flow</span></div>
+        <div class="flow-container">
+            <div class="flow-box presentation">🌐 HTTP Request</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box presentation">Exception Middleware</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box presentation">Logging Middleware</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box presentation">Tenant Middleware</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box presentation">JWT Auth</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box application">Controller → MediatR</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box infrastructure">Repository → DB</div>
         </div>
-      </div>
     </div>
-    <div class="term-row">
-      <span class="term-label blue">appsettings.json</span>
-      <div class="term-desc">
-        الـ Configuration File الأساسي. أقسم كذا قسم:
-        <div style="margin-top:.4rem;font-size:.85rem;color:var(--muted);line-height:1.7">
-          <strong style="color:var(--blue)">ConnectionStrings.MasterDb</strong> — SQL Server Connection String<br>
-          <strong style="color:var(--blue)">Jwt</strong> — Secret, Issuer, Audience, ExpirationHours<br>
-          <strong style="color:var(--blue)">TenancyOptions.Mode</strong> — SeparateSchema | SharedSchema<br>
-          <strong style="color:var(--blue)">Logging</strong> — Log Levels (Information, Warning, Error)
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ════════════════ 4.5 Application — Complementary Components ════════════════ -->
-<section class="section fade-in" id="application-extra">
-  <h2 class="section-title"><span class="num">٤</span><span style="font-size:.9rem;color:var(--muted)">+</span> Core.Application — Complementary Components</h2>
-
-  <div class="dual-grid">
-    <div class="dual-card" style="border-top:2px solid var(--purple)">
-      <h3 style="color:var(--purple)">📂 Common/Mapping/</h3>
-      <p>
-        <strong>MappingProfile.cs</strong> — بيحدد كيف الـ Entities بتتحوّل لـ DTOs والعكس باستخدام AutoMapper أو Mapster.<br><br>
-        مثال: <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">Tenant → TenantDto</code>، <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">CreateTenantRequest → Tenant</code>.<br><br>
-        بيمنع الـ Services من إنهم يعملوا Manual Mapping متكرر. أي Entity جديدة — بتضيف Mapping ليها هنا بس من مكان واحد.
-      </p>
-    </div>
-    <div class="dual-card" style="border-top:2px solid var(--red)">
-      <h3 style="color:var(--red)">📂 Common/Exceptions/</h3>
-      <p>
-        <strong>ValidationException.cs</strong> — بتترمي لما الـ Input مش صحيح. الـ ExceptionHandlingMiddleware بتمسكها وتحولها لـ 400 Bad Request مع تفاصيل الـ Validation Errors.<br><br>
-        <strong>ForbiddenException.cs</strong> — بتترمي لما User عنده صلاحية Authentication لكن مش مسموح له يعمل الـ Action ده (مش مسألة Token — ده بعد ما اتأكد إنه Authenticated). الـ Middleware بتحولها لـ 403 Forbidden.
-      </p>
-    </div>
-  </div>
-
-  <div class="card card-accent-purple">
-    <h3 style="color:var(--purple)">📂 Common/DTOs/ — الـ Shared Data Transfer Objects</h3>
-    <div class="term-list">
-      <div class="term-row">
-        <span class="term-label purple">ApiResponse.cs</span>
-        <div class="term-desc">
-          الـ Wrapper الموحد لكل Responses في النظام. الشكل:
-          <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem;display:block;margin-top:.4rem">{ Success: bool, Data: T, Message: string, Errors: List&lt;string&gt; }</code>
-          بدل ما كل Controller يرجع Format مختلف، كل حاجة بترجع نفس الـ Shape — سهّل على الـ Frontend يتعامل مع أي Response بنفس الطريقة من غير حالات خاصة.
-        </div>
-      </div>
-      <div class="term-row">
-        <span class="term-label purple">PagedResult.cs</span>
-        <div class="term-desc">
-          Wrapper للـ Pagination. الشكل:
-          <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem;display:block;margin-top:.4rem">{ Items: List&lt;T&gt;, TotalCount: int, Page: int, PageSize: int, TotalPages: int }</code>
-          الـ GenericRepository بيرجع الـ Items وبيحسب الـ TotalCount في نفس الـ Query — مفيش استدعاءين منفصلين لـ Database.
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card card-accent-purple">
-    <h3 style="color:var(--purple)">📂 Extensions/ServiceCollectionExtensions.cs</h3>
-    <p style="font-size:.9rem;color:var(--muted);line-height:1.8">
-      نقطة تسجيل كل الـ Application Services في الـ DI Container. الـ Presentation.API بتستدعيها مرة واحدة في <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">Program.cs</code>:
-      <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem;display:block;margin:.5rem 0">builder.Services.AddApplicationServices();</code>
-      جوّاها: تسجيل الـ Mini-Services كـ Scoped، AutoMapper / Mapster Profiles، Behaviors Pipeline. مفيش تسجيل Application Services في مكان تاني.
-    </p>
-  </div>
-</section>
-
-<!-- ════════════════ 5. Infrastructure ════════════════ -->
-<section class="section fade-in" id="infrastructure">
-  <h2 class="section-title"><span class="num">٥</span> Infrastructure — Multi-Tenancy &amp; Data Access</h2>
-
-  <div class="card card-accent-orange">
-    <div class="method-header">
-      <div class="method-icon orange">🏗️</div>
-      <div class="method-meta">
-        <h3 style="color:var(--orange)">Infrastructure</h3>
-        <span>تنفّذ كل Interfaces اللي اتعرّفت في Application. الـ Core مش عارف بحاجة من اللي هنا — ده العزل الصح</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- MultiTenancy -->
-  <div class="card card-accent-orange">
-    <h3 style="color:var(--orange)">📂 MultiTenancy/ — ⭐ Multi-Tenancy Core</h3>
-    <div class="term-list">
-      <div class="term-row">
-        <span class="term-label orange">TenancyOptions.cs</span>
-        <div class="term-desc">⭐ يحدد Mode الـ Multi-Tenancy: <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">SeparateSchema</code> أو <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">SharedSchema</code>. بيتقرأ من <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">appsettings.json → TenancyOptions.Mode</code>. الـ GenericRepository و TenantInterceptor بيستخدمه لتحديد السلوك.</div>
-      </div>
-      <div class="term-row">
-        <span class="term-label orange">TenantProvider.cs</span>
-        <div class="term-desc">ينفّذ <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">ITenantProvider</code>. بيجيب الـ Tenant الحالي من <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">HttpContext.Items</code> — اللي حطه الـ Middleware.</div>
-      </div>
-      <div class="term-row">
-        <span class="term-label orange">SchemaService.cs</span>
-        <div class="term-desc">⭐ ينشئ Schema جديد لكل Tenant: <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">CREATE SCHEMA tenant_{identifier}</code>. بيرجع الـ Schema Name.</div>
-      </div>
-      <div class="term-row">
-        <span class="term-label orange">TenantConnectionService.cs</span>
-        <div class="term-desc">يدير Connection Strings. بيستخدم في حالات DB-per-tenant. مع الـ Schema-per-tenant الحالي مش مستخدم في الـ ApplicationDbContext — العزل بيتم عبر الـ Schema نفسه.</div>
-      </div>
-      <div class="term-row">
-        <span class="term-label orange">TenantStore.cs</span>
-        <div class="term-desc">Cache لمعلومات الـ Tenants. بيمنع ضرب الـ Database كل Request — بيستخدم ConcurrentDictionary (قابل للتبديل لـ Redis).</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Two variants comparison -->
-  <div class="info-box purple">
-    <span class="ib-icon">⚖️</span>
-    <div style="flex:1">
-      <p style="font-weight:700;color:var(--purple);margin-bottom:.6rem">فهم الـ Two Variants — Separate Schema vs Shared Schema</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-        <div style="background:rgba(34,211,160,.06);border:1px solid rgba(34,211,160,.2);border-radius:8px;padding:.7rem .9rem">
-          <p style="color:var(--green);font-weight:600;font-size:.82rem;margin-bottom:.3rem">🟢 Separate Schema <span style="color:var(--muted);font-weight:400">(الافتراضي — موصى به)</span></p>
-          <p style="font-size:.8rem;color:var(--muted);line-height:1.5">كل Tenant ليه Schema في نفس الـ DB • مفيش فلترة بـ TenantId • العزل بالـ Schema نفسه • <code>HasDefaultSchema(schemaName)</code></p>
-        </div>
-        <div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:.7rem .9rem">
-          <p style="color:var(--yellow);font-weight:600;font-size:.82rem;margin-bottom:.3rem">🟡 Shared Schema <span style="color:var(--muted);font-weight:400">(variant بديل)</span></p>
-          <p style="font-size:.8rem;color:var(--muted);line-height:1.5">كل الـ Tenants في نفس الجداول • فلترة أوتوماتيك بـ <code>WHERE TenantId = @id</code> في الـ Repository • <code>ITenantEntity</code> مطلوب</p>
-        </div>
-      </div>
-      <p style="font-size:.8rem;color:var(--muted);margin-top:.5rem">⚙️ بنحدد الـ Mode في <code style="font-family:'JetBrains Mono',monospace;font-size:.78rem">appsettings.json → TenancyOptions.Mode</code>. الـ GenericRepository و TenantInterceptor بيضبطوا سلوكهم بناءً عليه.</p>
-    </div>
-  </div>
-
-  <!-- Persistence -->
-  <div class="card card-accent-green">
-    <h3 style="color:var(--green)">📂 Persistence/ — EF Core &amp; Data Access</h3>
-    <div class="term-list">
-      <div class="term-row">
-        <span class="term-label green">ApplicationDbContext.cs</span>
-        <div class="term-desc">الـ DbContext الرئيسي — دايمًا يشتغل على نفس الـ Connection String (Master DB). العزل بيتم عن طريق <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">HasDefaultSchema(schemaName)</code> في Separate Schema، أو عن طريق فلترة الـ Repository في Shared Schema. فيه الـ 3 Interceptors: Audit, SoftDelete, Tenant.</div>
-      </div>
-      <div class="term-row">
-        <span class="term-label green">MasterDbContext.cs</span>
-        <div class="term-desc">DbContext خاص بالـ Master Database — فيه جدول Tenants بس (Identifier, SchemaName, Plan, Status). مشترك بين كل الـ Tenants.</div>
-      </div>
-      <div class="term-row">
-        <span class="term-label green">Migrations/</span>
-        <div class="term-desc">
-          <strong style="color:var(--green)">Master/</strong> 🟢 — لجداول الـ Tenants, Plans, FeatureFlags. بتتنفذ <strong style="color:var(--yellow)">مرة واحدة</strong> على الـ Master DB.<br>
-          <strong style="color:var(--orange)">Tenant/</strong> 🟠 — لجداول البيزنس (Products, Invoices...). بتتنفذ <strong style="color:var(--yellow)">لكل Tenant Schema جديد</strong>.<br>
-          ⚠️ دول مش نفس الحاجة. لو خلطتهم هتتخربط الـ Migrations.
-        </div>
-      </div>
-      <div class="term-row">
-        <span class="term-label green">GenericRepository.cs</span>
-        <div class="term-desc">Base Repository واعي بالـ Mode. في Shared Schema بيزود <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">.Where(e => e.TenantId == currentTenantId)</code> على GetAll, Find, Any وبيتحقق من GetById. في Separate Schema مش محتاج فلترة — العزل بالـ Schema نفسه.</div>
-      </div>
-      <div class="term-row">
-        <span class="term-label green">Interceptors/</span>
-        <div class="term-desc">
-          <strong>AuditableEntityInterceptor</strong> — Auto-set CreatedAt, UpdatedAt, CreatedBy, UpdatedBy.<br>
-          <strong>SoftDeleteInterceptor</strong> — يحوّل Delete لـ IsDeleted = true.<br>
-          <strong>TenantInterceptor</strong> — Mode-aware: لما Tenant يتضاف يحط TenantId أوتوماتيك. في Shared Schema بيمنع تغيير TenantId على Modified.
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Custom Logic -->
-  <div class="card card-accent-red">
-    <h3 style="color:var(--red)">📂 Services/CustomLogic/ — ⭐ Per-Tenant Business Logic</h3>
-    <p style="font-size:.9rem;color:var(--muted);line-height:1.8;margin-bottom:1rem">
-      لو كل عميل عاوز Logic مختلف (زي حساب الضريبة)، بنستخدم <strong>Strategy + Factory Pattern</strong> عشان نعزل الكود من غير IF/Else:
-    </p>
-    <div class="term-list">
-      <div class="term-row">
-        <span class="term-label red">Strategies/</span>
-        <div class="term-desc">
-          كل Strategy بتنفّذ Interface واحد (مثلاً <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">ITaxCalculationStrategy</code>).<br>
-          <strong>StandardTaxStrategy</strong> — 10% للعملاء العاديين.<br>
-          <strong>VodafoneTaxStrategy</strong> — 14% + 5 جنيه لعميل معين.<br>
-          أي عميل جديد = Strategy جديدة — مفيش If/Else ولا تعديل في الكود القديم.
-        </div>
-      </div>
-      <div class="term-row">
-        <span class="term-label red">Factories/</span>
-        <div class="term-desc">
-          <strong>TaxStrategyFactory</strong> — يستقبل Tenant ID ويرجع Strategy الصح. التسجيل في DI بيتم شرطياً حسب الـ Tenant.
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- FeatureGating + Identity -->
-  <div class="dual-grid">
-    <div class="dual-card" style="border-top:2px solid var(--red)">
-      <h3 style="color:var(--red)">📂 Services/FeatureGating/</h3>
-      <p><strong>FeatureGatingService.cs</strong> — بينفّذ <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">IFeatureGatingService</code>. بيشيك على Plan الـ Tenant: <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">IsFeatureAllowed(tenantId, featureName)</code>. الـ Free Plan مش مسموح له يعمل Export — مفيش if في كل Controller.</p>
-    </div>
-    <div class="dual-card" style="border-top:2px solid var(--blue)">
-      <h3 style="color:var(--blue)">📂 Services/Identity/</h3>
-      <p><strong>JwtTokenService.cs</strong> — ينشئ JWT Tokens (Access + Refresh). بيحط UserId, TenantId, Roles في الـ Claims.<br><strong>CurrentUserService.cs</strong> — بينفّذ ICurrentUserService من HttpContext.User.Claims.<br><strong>PasswordHasher.cs</strong> — BCrypt hashing عبر IPasswordHasher.</p>
-    </div>
-  </div>
-
-  <!-- Shared Services -->
-  <div class="card card-accent-blue">
-    <h3 style="color:var(--blue)">📂 Services/ — Shared Infrastructure Services</h3>
-    <p style="font-size:.9rem;color:var(--muted);line-height:1.8;margin-bottom:1rem">
-      Services بتنفّذ Interfaces معرّفة في الـ Application Layer — مش بيزنس لوجيك، ده Technical Plumbing. كلها Cross-Cutting Concerns بيستخدمها أكتر من Mini-Service.
-    </p>
-    <div class="term-list">
-      <div class="term-row">
-        <span class="term-label blue">EmailService.cs</span>
-        <div class="term-desc">بينفّذ <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">IEmailService</code>. بيبعت Emails عبر SMTP أو SendGrid أو AWS SES — الـ Provider بيتحدد في <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">appsettings.json</code>. بيستخدم Templates لـ Welcome Email, Password Reset, Billing Invoices.</div>
-      </div>
-      <div class="term-row">
-        <span class="term-label blue">CacheService.cs</span>
-        <div class="term-desc">وينفّذ <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">ICacheService</code>. Wrapper على <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">IDistributedCache</code> (Redis أو Memory). Methods: <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">GetAsync&lt;T&gt;</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">SetAsync&lt;T&gt;</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">RemoveAsync</code>.</div>
-      </div>
-      <div class="term-row">
-        <span class="term-label blue">FileStorageService.cs</span>
-        <div class="term-desc">بينفّذ <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">IFileStorageService</code>. بيرفع وبيجيب Files من Cloud Storage (AWS S3, Azure Blob, أو Local في Development). Methods: <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">UploadAsync</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">GetUrlAsync</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">DeleteAsync</code>.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Persistence Configurations -->
-  <div class="card card-accent-green">
-    <h3 style="color:var(--green)">📂 Persistence/Configurations/ — EF Core Entity Configurations</h3>
-    <p style="font-size:.9rem;color:var(--muted);line-height:1.8;margin-bottom:1rem">
-      كل Entity ليها Configuration Class منفصل بينفّذ <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">IEntityTypeConfiguration&lt;T&gt;</code>. بعيداً عن الـ Data Annotations — الـ Domain Entities نضيفة ومش فيها EF Attributes.
-    </p>
-    <div class="term-list">
-      <div class="term-row">
-        <span class="term-label green">TenantConfiguration.cs</span>
-        <div class="term-desc">بيحدد Table Name, Column Types, Indexes للـ Tenants Table في الـ Master DB. بيعمل Unique Index على <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">Identifier</code> و <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">SchemaName</code> عشان يمنع التكرار.</div>
-      </div>
-      <div class="term-row">
-        <span class="term-label green">UserConfiguration.cs</span>
-        <div class="term-desc">بيحدد Indexes على <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">Email</code> و <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">TenantId</code>. بيضمن إن الـ PasswordHash مش بيتعرضش في Queries عادية.</div>
-      </div>
-      <div class="term-row">
-        <span class="term-label green">ProductConfiguration.cs</span>
-        <div class="term-desc">مثال على Configuration لـ Tenant-Scoped Entity. بيحدد Column Names وأي Precision محتاجها (زي <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">Price decimal(18,2)</code>).</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- UnitOfWork -->
-  <div class="card card-accent-green">
-    <h3 style="color:var(--green)">📂 Persistence/Repositories/UnitOfWork.cs</h3>
-    <p style="font-size:.9rem;color:var(--muted);line-height:1.8">
-      بينفّذ <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">IUnitOfWork</code>. بيضمن إن مجموعة Operations بتتعمل كلها أو ولا حاجة (Atomic). Method واحدة: <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">CommitAsync(CancellationToken ct)</code> تستدعيها في آخر الـ Service.
-    </p>
-  </div>
-</section>
-
-<!-- ════════════════ 6. Presentation ════════════════ -->
-<section class="section fade-in" id="presentation">
-  <h2 class="section-title"><span class="num">٦</span> Presentation.API — Application Entry Point</h2>
-
-  <div class="card card-accent-blue">
-    <div class="method-header">
-      <div class="method-icon blue">🌐</div>
-      <div class="method-meta">
-        <h3 style="color:var(--blue)">Presentation.API</h3>
-        <span>مفيش Business Logic خالص هنا — مجرد Controllers بتستقبل Requests وتمررها لـ Mini-Services</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="term-list">
-    <div class="term-row">
-      <span class="term-label blue">Controllers/</span>
-      <div class="term-desc">
-        <strong>BaseApiController.cs</strong> — Base كل الـ Controllers (ApiController, Route, Helper Methods).<br>
-        <strong>TenantsController.cs</strong> — Endpoints لإدارة الـ Tenants.<br>
-        <strong>AuthController.cs</strong> — Login, Register, RefreshToken.<br>
-        <strong>ProductsController.cs</strong> — CRUD Products.<br>
-        <strong>BillingController.cs</strong> — Subscriptions, Plans, Invoices.
-      </div>
-    </div>
-    <div class="term-row">
-      <span class="term-label blue">Middlewares/</span>
-      <div class="term-desc">
-        <strong>TenantResolutionMiddleware.cs</strong> — ⭐ يكتشف الـ Tenant من: Subdomain (tenant1.acme.com) ← الأفضل، أو Header (X-Tenant-Id)، أو JWT Claim. يحط TenantInfo في HttpContext.Items (TenantId, SchemaName, Plan, Status).<br>
-        <strong>ExceptionHandlingMiddleware.cs</strong> — يمسك أي Exception ويحوله لـ JSON (400, 401, 403, 404, 500).<br>
-        <strong>RequestLoggingMiddleware.cs</strong> — يسجل Method, Path, Status, Duration.
-      </div>
-    </div>
-    <div class="term-row">
-      <span class="term-label blue">Extensions/</span>
-      <div class="term-desc">
-        <strong>ServiceCollectionExtensions.cs</strong> — DI لكل المشاريع: CORS, Swagger, MVC, JWT, Services, Repositories. فيه <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">AddTenantDbContext()</code> اللي بيقرأ TenancyOptions من Config ويسجل الـ Infrastructure Layer.<br>
-        <strong>ApplicationBuilderExtensions.cs</strong> — ترتيب Pipeline: Exception → Logging → Tenant → Auth → Controllers.
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ════════════════ 7. Tests ════════════════ -->
-<section class="section fade-in" id="tests">
-  <h2 class="section-title"><span class="num">٧</span> Tests — Quality Assurance (4 Projects)</h2>
-
-  <div class="card card-accent-green">
-    <div class="method-header">
-      <div class="method-icon green">🧪</div>
-      <div class="method-meta">
-        <h3 style="color:var(--green)">xUnit · 4 Test Projects</h3>
-        <span>مرآة للـ Source Structure — كل Layer ليها Test Project مستقل</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="diagram-box">
-    <div class="diagram-title">tests/ — Mirroring src/ Structure</div>
-    <div class="folder-display">
-<pre><span class="fd-project">📦 tests/</span>
- <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Acme.SaaS.Domain.Tests</span>     <span class="fd-comment">// Pure Unit — مفيش Mocks</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">ProductTests.cs</span>             <span class="fd-comment">// Entity Rules</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">MoneyTests.cs</span>               <span class="fd-comment">// Value Object Equality</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">DomainExceptionTests.cs</span>     <span class="fd-comment">// Exception Behavior</span>
- <span class="fd-sep">┃</span>
- <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Acme.SaaS.Application.Tests</span> <span class="fd-comment">// Use Cases — Mocks للـ Interfaces</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">TenantServiceTests.cs</span>       <span class="fd-comment">// Tenant CRUD Logic</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">AuthServiceTests.cs</span>         <span class="fd-comment">// Login/Register Flow</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">ProductServiceTests.cs</span>      <span class="fd-comment">// Product Business Rules</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">BillingServiceTests.cs</span>      <span class="fd-comment">// Plan Upgrade Logic</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">MappingProfileTests.cs</span>      <span class="fd-comment">// AutoMapper Config</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">ApiResponseTests.cs</span>         <span class="fd-comment">// Response Format</span>
- <span class="fd-sep">┃</span>
- <span class="fd-sep">┣━━</span> <span class="fd-folder">📂 Acme.SaaS.Infrastructure.Tests</span> <span class="fd-comment">// Integration — InMemory DB</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">GenericRepositoryTests.cs</span>   <span class="fd-comment">// CRUD + Tenant Filtering</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">UnitOfWorkTests.cs</span>          <span class="fd-comment">// Transaction Atomicity</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">TenantInterceptorTests.cs</span>   <span class="fd-comment">// Auto TenantId Assignment</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">PasswordHasherTests.cs</span>      <span class="fd-comment">// BCrypt Hashing</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┣</span> <span class="fd-file">FeatureGatingTests.cs</span>       <span class="fd-comment">// Plan-Based Access</span>
- <span class="fd-sep">┃</span>  <span class="fd-sep">┗</span> <span class="fd-file">TaxStrategyTests.cs</span>         <span class="fd-comment">// Per-Tenant Strategy</span>
- <span class="fd-sep">┃</span>
- <span class="fd-sep">┗━━</span> <span class="fd-folder">📂 Acme.SaaS.API.Tests</span>        <span class="fd-comment">// HTTP — WebApplicationFactory</span>
-      <span class="fd-sep">┣</span> <span class="fd-file">TenantsControllerTests.cs</span>  <span class="fd-comment">// Tenant Endpoints</span>
-      <span class="fd-sep">┣</span> <span class="fd-file">AuthControllerTests.cs</span>     <span class="fd-comment">// Login/Register API</span>
-      <span class="fd-sep">┣</span> <span class="fd-file">ProductsControllerTests.cs</span> <span class="fd-comment">// Product CRUD API</span>
-      <span class="fd-sep">┣</span> <span class="fd-file">BillingControllerTests.cs</span>  <span class="fd-comment">// Billing API</span>
-      <span class="fd-sep">┣</span> <span class="fd-file">ExceptionHandlingTests.cs</span>  <span class="fd-comment">// Error Responses</span>
-      <span class="fd-sep">┣</span> <span class="fd-file">TenantResolutionTests.cs</span>   <span class="fd-comment">// Subdomain/Header/JWT</span>
-      <span class="fd-sep">┗</span> <span class="fd-file">PipelineOrderTests.cs</span>      <span class="fd-comment">// Middleware Sequence</span></pre>
-    </div>
-  </div>
-
-  <div class="dual-grid">
-    <div class="dual-card" style="border-top:2px solid var(--green)">
-      <h3 style="color:var(--green)">🟢 Domain.Tests — Pure Unit</h3>
-      <p>
-        بتختبر الـ Business Logic من غير Mocks ولا Database.<br><br>
-        <strong>ProductTests.cs</strong> — يتأكد إن الـ Product ما ينفعش يتعمل من غير Name أو Price أقل من صفر.<br>
-        <strong>MoneyTests.cs</strong> — يتأكد إن 100 دولار = 100 دولار و 100 دولار ≠ 200 دولار.<br>
-        <strong>DomainExceptionTests.cs</strong> — يتأكد من رسائل الخطأ و State Transitions.
-      </p>
-    </div>
-    <div class="dual-card" style="border-top:2px solid var(--purple)">
-      <h3 style="color:var(--purple)">🟣 Application.Tests — Use Cases</h3>
-      <p>
-        بتختبر الـ Mini-Services باستخدام Mocks بدل الـ Infrastructure الحقيقي.<br><br>
-        <strong>TenantServiceTests.cs</strong> — يتأكد إن إنشاء Tenant بيحط SchemaName و Status صح.<br>
-        <strong>AuthServiceTests.cs</strong> — يتأكد إن Login بيعمل Return Token والـ Register بيعمل Hash للـ Password.<br>
-        <strong>MappingProfileTests.cs</strong> — يتأكد إن AutoMapper Config سليم ومفيش Mapping غلط.
-      </p>
-    </div>
-    <div class="dual-card" style="border-top:2px solid var(--orange)">
-      <h3 style="color:var(--orange)">🟠 Infrastructure.Tests — Integration</h3>
-      <p>
-        بتختبر الـ EF Core والـ Repositories باستخدام InMemory Database.<br><br>
-        <strong>GenericRepositoryTests.cs</strong> — يتأكد إن Separate Schema مش بيزود WHERE TenantId، وإن Shared Schema بيعملها.<br>
-        <strong>TenantInterceptorTests.cs</strong> — يتأكد إن الـ Interceptor بيحط TenantId تلقائياً لما تضيف Entity جديدة.<br>
-        <strong>TaxStrategyTests.cs</strong> — يتأكد إن StandardTaxStrategy بتحسب 10% و Vodafone بتحسب 14% + 5.
-      </p>
-    </div>
-    <div class="dual-card" style="border-top:2px solid var(--blue)">
-      <h3 style="color:var(--blue)">🔵 API.Tests — End-to-End</h3>
-      <p>
-        بتختبر الـ HTTP Layer باستخدام WebApplicationFactory (Test Server).<br><br>
-        <strong>TenantResolutionTests.cs</strong> — يتأكد إن Subdomain tenant1.localhost بيجيب TenantId الصح.<br>
-        <strong>ExceptionHandlingTests.cs</strong> — يتأكد إن NotFound بيرجع 408 (كده غلط، يقصد 404) وValidation بيرجع 400 مع Errors.<br>
-        <strong>PipelineOrderTests.cs</strong> — يتأكد إن الـ Middlewares شغالة بالترتيب الصح.
-      </p>
-    </div>
-  </div>
-
-  <div class="info-box green">
-    <span class="ib-icon">🎯</span>
-    <p><strong>Testing Strategy:</strong><br>
-    Domain: Pure Unit — أسرع Tests (ملي ثانية).<br>
-    Application: Unit مع Mocks — بتركز على الـ Logic مش الـ Infrastructure.<br>
-    Infrastructure: Integration مع InMemory DB — بتختبر الـ SQL Mapping والـ Interceptors.<br>
-    API: Integration مع Test Server — بتختبر الـ HTTP Pipeline كامل من البداية للنهاية.</p>
-  </div>
-</section>
-
-<!-- ════════════════ 8. Pipeline Flow ════════════════ -->
-<section class="section fade-in" id="flow">
-  <h2 class="section-title"><span class="num">٨</span> Pipeline Flow — The Request Lifecycle</h2>
-
-  <div class="diagram-box">
-    <div class="diagram-title">Single Request Journey: From URL to Database</div>
-    <svg class="diag-svg" viewBox="0 0 780 280" xmlns="http://www.w3.org/2000/svg" overflow="visible">
-      <defs>
-        <marker id="arr-pl" markerWidth="8" markerHeight="6" refX="6" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L8,3 z" fill="#38bdf8"/>
-        </marker>
-      </defs>
-
-      <text x="390" y="18" text-anchor="middle" font-size="9" fill="#fbbf24" font-weight="700" font-family="IBM Plex Sans Arabic">🌐 GET https://tenant1.acme.com/api/products</text>
-
-      <rect x="50" y="32" width="680" height="34" rx="8" fill="rgba(248,113,113,.08)" stroke="rgba(248,113,113,.35)" stroke-width="1.5"/>
-      <text x="390" y="54" text-anchor="middle" font-size="9" font-weight="700" fill="#f87171" font-family="JetBrains Mono">1️⃣ ExceptionHandlingMiddleware</text>
-
-      <line x1="390" y1="66" x2="390" y2="78" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arr-pl)"/>
-
-      <rect x="50" y="80" width="680" height="34" rx="8" fill="rgba(56,189,248,.08)" stroke="rgba(56,189,248,.35)" stroke-width="1.5"/>
-      <text x="390" y="102" text-anchor="middle" font-size="9" font-weight="700" fill="#38bdf8" font-family="JetBrains Mono">2️⃣ RequestLoggingMiddleware</text>
-
-      <line x1="390" y1="114" x2="390" y2="126" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arr-pl)"/>
-
-      <rect x="50" y="128" width="680" height="40" rx="8" fill="rgba(167,139,250,.12)" stroke="rgba(167,139,250,.45)" stroke-width="2"/>
-      <text x="390" y="148" text-anchor="middle" font-size="9" font-weight="700" fill="#a78bfa" font-family="JetBrains Mono">3️⃣ ⭐ TenantResolutionMiddleware</text>
-      <text x="390" y="162" text-anchor="middle" font-size="8" fill="#94a3b8" font-family="IBM Plex Sans Arabic">subdomain → tenant1 → يجيب الـ TenantInfo من الـ Store → يحطه في HttpContext.Items</text>
-
-      <line x1="390" y1="168" x2="390" y2="180" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arr-pl)"/>
-
-      <rect x="50" y="182" width="680" height="34" rx="8" fill="rgba(34,211,160,.08)" stroke="rgba(34,211,160,.35)" stroke-width="1.5"/>
-      <text x="390" y="204" text-anchor="middle" font-size="9" font-weight="700" fill="#22d3a0" font-family="JetBrains Mono">4️⃣ Authentication (JWT) → Authorization</text>
-
-      <line x1="390" y1="216" x2="390" y2="228" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arr-pl)"/>
-
-      <rect x="50" y="230" width="680" height="40" rx="8" fill="rgba(251,191,36,.08)" stroke="rgba(251,191,36,.35)" stroke-width="1.5"/>
-      <text x="390" y="250" text-anchor="middle" font-size="9" font-weight="700" fill="#fbbf24" font-family="JetBrains Mono">5️⃣ ProductsController → IProductService → IApplicationDbContext</text>
-      <text x="390" y="265" text-anchor="middle" font-size="8" fill="#94a3b8" font-family="IBM Plex Sans Arabic">الـ DbContext بيستخدم Schema = "tenant1" — كل الداتا معزولة تماماً ✅</text>
-    </svg>
-  </div>
-
-  <div class="steps-grid">
-    <div class="step-card">
-      <div class="step-badge red">١</div>
-      <div class="step-body">
-        <h4>ExceptionHandlingMiddleware</h4>
-        <p>أول حاجة بتستقبل الـ Request — بس هي أصلاً آخر خط دفاع. لو حصل Exception في أي حتة، ده اللي يمسكه ويحوله لـ JSON جميل بدل Stack Trace.</p>
-      </div>
-    </div>
-    <div class="step-card">
-      <div class="step-badge blue">٢</div>
-      <div class="step-body">
-        <h4>RequestLoggingMiddleware</h4>
-        <p>يسجل كل Request جاي — عارفين مين طلب إيه وإمتى. مفيد لـ Debugging و Monitoring.</p>
-      </div>
-    </div>
-    <div class="step-card">
-      <div class="step-badge purple">٣</div>
-      <div class="step-body">
-        <h4>⭐ TenantResolutionMiddleware</h4>
-        <p>القلب. بيقرر مين الـ Tenant من Subdomain/Header/JWT. يجيب معلوماته من الـ TenantStore ويحطها في HttpContext.Items. كل اللي بعد كده بيقرأ من HttpContext.Items — مفيش استدعاءات متكررة للـ Database.</p>
-      </div>
-    </div>
-    <div class="step-card">
-      <div class="step-badge green">٤</div>
-      <div class="step-body">
-        <h4>Authentication &amp; Authorization</h4>
-        <p>JWT يتأكد من صحة الـ Token. Authorization يشيك على Roles/Permissions.</p>
-      </div>
-    </div>
-    <div class="step-card">
-      <div class="step-badge yellow">٥</div>
-      <div class="step-body">
-        <h4>Controller → Service → DbContext</h4>
-        <p>الـ Controller يستدعي Mini-Service. الـ GenericRepository و Interceptors يطبقوا الـ Tenant Filter. الـ DbContext يستخدم Schema الصحيح — Security in Depth.</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="info-box green">
-    <span class="ib-icon">🔒</span>
-    <p><strong>Security in 3 Layers:</strong><br>
-    1. <strong>TenantResolutionMiddleware</strong> — Resolves the current Tenant.<br>
-    2. <strong>ApplicationDbContext</strong> — Operates on the same DB; isolation by schema (Separate) or filter (Shared).<br>
-    3. <strong>GenericRepository</strong> — (Shared Schema) auto-appends WHERE TenantId on every Query.</p>
-  </div>
-</section>
-
-</main>
-
-<footer>
-  <div class="footer-inner">
-    <div class="footer-title">☁️ SaaS Multi-Tenant · Standard Clean Architecture</div>
-    <div class="footer-links">
-      <span class="footer-link">Proposal by Mohamed Ehab</span>
-      <span class="footer-link">اقتراح شخصي — Mohamed Ehab</span>
-    </div>
-  </div>
-</footer>
+</div>
 
 <script>
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(e => {
-      if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); }
+    document.querySelectorAll('.tree .folder').forEach(folder => {
+        folder.addEventListener('click', function(e) {
+            if (e.target.classList.contains('toggle')) {
+                const parent = this.parentElement;
+                parent.classList.toggle('collapsed');
+            }
+        });
     });
-  }, { threshold: 0.07 });
-  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    document.querySelectorAll('.practices li').forEach(practice => {
+        practice.addEventListener('click', function() {
+            const example = this.querySelector('.practice-example');
+            example.classList.toggle('show');
+            const targetId = this.getAttribute('data-target');
+            const highlightClass = this.getAttribute('data-highlight');
+            const targetLayer = document.getElementById(targetId);
+            if (targetLayer) {
+                document.querySelectorAll('.layer').forEach(layer => {
+                    layer.classList.remove('highlight-domain', 'highlight-application', 'highlight-infrastructure', 'highlight-presentation');
+                });
+                targetLayer.classList.add(`highlight-${highlightClass}`);
+                targetLayer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => { targetLayer.classList.remove(`highlight-${highlightClass}`); }, 2000);
+            }
+        });
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    });
+    document.querySelectorAll('.layer, .feature-card').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'all 0.6s ease-out';
+        observer.observe(el);
+    });
 </script>
 </body>
 </html>
